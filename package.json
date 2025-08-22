@@ -1,0 +1,13 @@
+{
+  "name": "solanalysis",
+  "version": "1.0.0",
+  "description": "Blockchain analysis website for Solana network",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": ["blockchain", "solana", "analysis", "crypto"],
+  "author": "Jeffrey Goh",
+  "license": "MIT"
+}

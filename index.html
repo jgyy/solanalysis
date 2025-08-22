@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solanalysis - Live Blockchain Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-cube"></i>
+                <span>Solanalysis</span>
+            </div>
+            <div class="nav-status">
+                <span class="status-indicator" id="connectionStatus">
+                    <i class="fas fa-circle"></i> Connected to Solana
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero-section">
+            <h1>Live Solana Blockchain Analysis</h1>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-tachometer-alt"></i> Network Overview</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Network Speed</h3>
+                    <p class="stat-value" id="networkTps">0</p>
+                    <p class="stat-label">Transactions Per Second</p>
+                    <div class="stat-description">How many transactions the network processes each second</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-cubes"></i>
+                    <h3>Current Block</h3>
+                    <p class="stat-value" id="blockHeight">Loading...</p>
+                    <p class="stat-label">Block Height</p>
+                    <div class="stat-description">Total number of blocks created since genesis</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-dollar-sign"></i>
+                    <h3>SOL Price</h3>
+                    <p class="stat-value" id="solPrice">$0.00</p>
+                    <p class="stat-label">USD per SOL</p>
+                    <div class="stat-description">Current market price of Solana's native token</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-server"></i>
+                    <h3>Validators</h3>
+                    <p class="stat-value" id="validators">0</p>
+                    <p class="stat-label">Active Nodes</p>
+                    <div class="stat-description">Number of validators securing the network</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-exchange-alt"></i> Live Transaction Feed</h2>
+            <p class="section-description">Recent transactions happening on the Solana blockchain right now</p>
+            <div class="live-feed-container">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Fee</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liveTxFeed">
+                            <tr>
+                                <td colspan="5" class="loading">Loading live transactions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-fire"></i> Top Active Wallets</h2>
+            <p class="section-description">Most active wallets in the last 24 hours</p>
+            <div class="wallets-grid" id="topWallets">
+                <div class="loading-card">
+                    <div class="spinner"></div>
+                    <p>Analyzing wallet activity...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-coins"></i> Popular Tokens</h2>
+            <p class="section-description">Most traded tokens on Solana right now</p>
+            <div class="tokens-grid" id="popularTokens">
+                <div class="loading-card">
+                    <div class="spinner"></div>
+                    <p>Loading token data...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-chart-bar"></i> Network Activity</h2>
+            <p class="section-description">Transaction volume and patterns over time</p>
+            <div class="activity-stats">
+                <div class="activity-card">
+                    <h3>Last Hour</h3>
+                    <p class="activity-value" id="hourlyTx">0</p>
+                    <p class="activity-label">Total Transactions</p>
+                </div>
+                <div class="activity-card">
+                    <h3>Peak TPS Today</h3>
+                    <p class="activity-value" id="peakTps">0</p>
+                    <p class="activity-label">Maximum Speed</p>
+                </div>
+                <div class="activity-card">
+                    <h3>Average Block Time</h3>
+                    <p class="activity-value" id="avgBlockTime">0s</p>
+                    <p class="activity-label">Block Production</p>
+                </div>
+                <div class="activity-card">
+                    <h3>Network Load</h3>
+                    <p class="activity-value" id="networkLoad">0%</p>
+                    <p class="activity-label">Capacity Usage</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-trophy"></i> Biggest Transactions Today</h2>
+            <p class="section-description">Largest value transfers in the last 24 hours</p>
+            <div class="big-tx-container" id="bigTransactions">
+                <div class="loading-card">
+                    <div class="spinner"></div>
+                    <p>Finding large transactions...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fas fa-info-circle"></i> What Does This Mean?</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>What is a Blockchain?</h3>
+                    <p>Think of it as a public ledger that records all transactions. Every transaction is grouped into blocks, creating a chain of records that can't be altered.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Why is Solana Fast?</h3>
+                    <p>Solana can process thousands of transactions per second, making it one of the fastest blockchains. This speed enables real-time applications and low fees.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>How is it Secure?</h3>
+                    <p>Hundreds of validators around the world verify every transaction. This decentralized network ensures no single entity can control or manipulate the blockchain.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-coins"></i>
+                    <h3>What are Tokens?</h3>
+                    <p>Tokens are digital assets on the blockchain. SOL is Solana's native token used for transactions, while other tokens represent various projects and currencies.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2025 Solanalysis by Jeffrey Goh. All rights reserved.</p>
+            <p>Real-time data from Solana Mainnet</p>
+            <p class="footer-stats">
+                <span id="totalAnalyzed">0</span> transactions analyzed | 
+                <span id="uptimePercent">99.9%</span> uptime
+            </p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
