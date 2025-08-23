@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solanalysis - Live Blockchain Analysis</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -15,8 +17,28 @@
                 <span>Solanalysis</span>
             </div>
             <div class="nav-status">
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <i class="fas fa-sun" id="themeIcon"></i>
+                </button>
+                <select class="currency-selector" id="currencySelector">
+                    <option value="USD">$ USD</option>
+                    <option value="EUR">€ EUR</option>
+                    <option value="GBP">£ GBP</option>
+                    <option value="JPY">¥ JPY</option>
+                    <option value="CAD">$ CAD</option>
+                    <option value="AUD">$ AUD</option>
+                    <option value="CHF">₣ CHF</option>
+                    <option value="CNY">¥ CNY</option>
+                    <option value="INR">₹ INR</option>
+                    <option value="KRW">₩ KRW</option>
+                    <option value="SGD">$ SGD</option>
+                    <option value="BRL">R$ BRL</option>
+                </select>
                 <span class="status-indicator" id="connectionStatus">
                     <i class="fas fa-circle"></i> Connected to Solana
+                </span>
+                <span class="update-timer" id="updateTimer">
+                    <i class="fas fa-sync-alt"></i> Next update in <span id="countdown">10</span>s
                 </span>
             </div>
         </div>
@@ -24,7 +46,7 @@
 
     <main class="container">
         <section class="hero-section">
-            <h1>Live Solana Blockchain Analysis</h1>
+            <h1>Solana Blockchain Analysis</h1>
         </section>
 
         <section class="section">
@@ -48,7 +70,6 @@
                     <i class="fas fa-dollar-sign"></i>
                     <h3>SOL Price</h3>
                     <p class="stat-value" id="solPrice">$0.00</p>
-                    <p class="stat-label">USD per SOL</p>
                     <div class="stat-description">Current market price of Solana's native token</div>
                 </div>
                 <div class="stat-card">
@@ -87,8 +108,8 @@
         </section>
 
         <section class="section">
-            <h2><i class="fas fa-fire"></i> Top Active Wallets</h2>
-            <p class="section-description">Most active wallets in the last 24 hours</p>
+            <h2><i class="fas fa-wallet"></i> Major Exchange Wallets</h2>
+            <p class="section-description">Largest exchange and institutional wallets on Solana</p>
             <div class="wallets-grid" id="topWallets">
                 <div class="loading-card">
                     <div class="spinner"></div>
