@@ -1,6 +1,24 @@
-const PROXY_URL = 'http://localhost:3000';
+import type { 
+  NetworkStats, 
+  WalletInfo, 
+  TokenInfo, 
+  BigTransaction, 
+  Currency, 
+  CurrencySymbols,
+  SolanaTransaction,
+  PerformanceSample,
+  RpcResponse,
+  PriceResponse,
+  LocationResponse,
+  TransactionType
+} from '@solanalysis/shared';
 
-async function fetchWithFallback(body) {
+// When running in Docker with nginx, all requests go through nginx proxy
+// When running locally in dev, use localhost:3000 directly
+const isDocker = window.location.port === '' || window.location.port === '80';
+const PROXY_URL = isDocker ? '' : 'http://localhost:3000';
+
+async function fetchWithFallback(body: any): Promise<Response> {
     try {
         const response = await fetch(`${PROXY_URL}/solana-rpc`, {
             method: 'POST',
@@ -18,11 +36,11 @@ async function fetchWithFallback(body) {
         return {
             ok: false,
             json: async () => ({ error: { message: 'Proxy server not available' } })
-        };
+        } as Response;
     }
 }
 
-let networkStats = {
+let networkStats: NetworkStats = {
     tps: 0,
     blockHeight: 0,
     solPrice: 0,
@@ -32,8 +50,8 @@ let networkStats = {
     totalAnalyzed: 0
 };
 
-let selectedCurrency = 'USD';
-const currencySymbols = {
+let selectedCurrency: Currency = 'USD';
+const currencySymbols: CurrencySymbols = {
     USD: '$',
     EUR: '€',
     GBP: '£',
@@ -48,12 +66,12 @@ const currencySymbols = {
     BRL: 'R$'
 };
 
-async function detectUserCurrency() {
+async function detectUserCurrency(): Promise<Currency> {
     try {
         const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
+        const data: LocationResponse = await response.json();
         
-        const countryCurrencyMap = {
+        const countryCurrencyMap: { [key: string]: Currency } = {
             US: 'USD', CA: 'CAD',
             GB: 'GBP',
             DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', NL: 'EUR', BE: 'EUR',
@@ -68,22 +86,22 @@ async function detectUserCurrency() {
         };
         
         const userCurrency = countryCurrencyMap[data.country_code] || 'USD';
-        selectedCurrency = userCurrency;
+        selectedCurrency = userCurrency as Currency;
         
-        const selector = document.getElementById('currencySelector');
+        const selector = document.getElementById('currencySelector') as HTMLSelectElement;
         if (selector) {
             selector.value = userCurrency;
         }
         
         console.log(`Detected user location: ${data.country_name}, using ${userCurrency}`);
-        return userCurrency;
+        return userCurrency as Currency;
     } catch (error) {
         console.log('Could not detect location, defaulting to USD');
         return 'USD';
     }
 }
 
-function formatPrice(amount, currency = selectedCurrency) {
+function formatPrice(amount: number, currency: Currency = selectedCurrency): string {
     const symbol = currencySymbols[currency] || '$';
     
     if (currency === 'JPY' || currency === 'KRW') {
@@ -93,10 +111,10 @@ function formatPrice(amount, currency = selectedCurrency) {
     return `${symbol}${amount.toFixed(2)}`;
 }
 
-let countdownInterval;
+let countdownInterval: NodeJS.Timeout | null = null;
 let updateCountdown = 10;
 
-function startCountdown() {
+function startCountdown(): void {
     updateCountdown = 10;
     const countdownElement = document.getElementById('countdown');
     const timerElement = document.getElementById('updateTimer');
@@ -106,17 +124,17 @@ function startCountdown() {
     countdownInterval = setInterval(() => {
         updateCountdown--;
         if (countdownElement) {
-            countdownElement.textContent = updateCountdown;
+            countdownElement.textContent = updateCountdown.toString();
             
             if (updateCountdown === 0) {
-                timerElement.classList.add('updating');
-                setTimeout(() => timerElement.classList.remove('updating'), 1000);
+                timerElement?.classList.add('updating');
+                setTimeout(() => timerElement?.classList.remove('updating'), 1000);
             }
         }
     }, 1000);
 }
 
-function updateValueWithAnimation(elementId, newValue, formatter = (v) => v) {
+function updateValueWithAnimation(elementId: string, newValue: any, formatter: (v: any) => string = (v) => v): void {
     const element = document.getElementById(elementId);
     if (!element) return;
     
@@ -133,9 +151,9 @@ function updateValueWithAnimation(elementId, newValue, formatter = (v) => v) {
     }
 }
 
-let blockTimes = [];
+let blockTimes: number[] = [];
 
-async function fetchNetworkStats() {
+async function fetchNetworkStats(): Promise<void> {
     try {
         const [perfResponse, blockResponse, priceResponse, validatorResponse] = await Promise.all([
             fetchWithFallback({
@@ -160,12 +178,12 @@ async function fetchNetworkStats() {
         ]);
 
         const [perfData, blockData, validatorData] = await Promise.all([
-            perfResponse.json(),
-            blockResponse.json(),
-            validatorResponse.json()
+            perfResponse.json() as Promise<RpcResponse<PerformanceSample[]>>,
+            blockResponse.json() as Promise<RpcResponse<number>>,
+            validatorResponse.json() as Promise<RpcResponse<any>>
         ]);
         
-        let priceData = null;
+        let priceData: PriceResponse | null = null;
         if (priceResponse) {
             try {
                 priceData = await priceResponse.json();
@@ -196,16 +214,18 @@ async function fetchNetworkStats() {
                 
                 updateValueWithAnimation('networkTps', networkStats.tps, v => v.toLocaleString());
                 
-                if (typeof updateTPSChart === 'function') {
-                    updateTPSChart(networkStats.tps);
+                if (typeof (window as any).updateTPSChart === 'function') {
+                    (window as any).updateTPSChart(networkStats.tps);
                 }
             } else {
                 console.log('No valid performance samples received');
-                document.getElementById('networkTps').textContent = '---';
+                const elem = document.getElementById('networkTps');
+                if (elem) elem.textContent = '---';
             }
         } else {
             console.log('No performance data received');
-            document.getElementById('networkTps').textContent = '---';
+            const elem = document.getElementById('networkTps');
+            if (elem) elem.textContent = '---';
         }
 
         if (blockData.result) {
@@ -216,9 +236,9 @@ async function fetchNetworkStats() {
         if (priceData) {
             let price = 0;
             if (priceData.price) {
-                price = parseFloat(priceData.price);
+                price = priceData.price;
             } else if (priceData.data?.rates?.USD) {
-                price = parseFloat(priceData.data.rates.USD);
+                price = priceData.data.rates.USD;
             } else if (priceData.solana?.usd) {
                 price = priceData.solana.usd;
             }
@@ -227,14 +247,16 @@ async function fetchNetworkStats() {
                 networkStats.solPrice = price;
                 updateValueWithAnimation('solPrice', price, v => formatPrice(v, selectedCurrency));
                 
-                if (typeof updatePriceChart === 'function') {
-                    updatePriceChart(price);
+                if (typeof (window as any).updatePriceChart === 'function') {
+                    (window as any).updatePriceChart(price);
                 }
             } else {
-                document.getElementById('solPrice').textContent = `${currencySymbols[selectedCurrency]}---`;
+                const elem = document.getElementById('solPrice');
+                if (elem) elem.textContent = `${currencySymbols[selectedCurrency]}---`;
             }
         } else {
-            document.getElementById('solPrice').textContent = `${currencySymbols[selectedCurrency]}---`;
+            const elem = document.getElementById('solPrice');
+            if (elem) elem.textContent = `${currencySymbols[selectedCurrency]}---`;
         }
 
         if (validatorData.result) {
@@ -246,14 +268,17 @@ async function fetchNetworkStats() {
         
     } catch (error) {
         console.error('Error fetching network stats:', error);
-        document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i> Connection Error';
-        document.getElementById('connectionStatus').style.color = '#FF5555';
+        const statusElem = document.getElementById('connectionStatus');
+        if (statusElem) {
+            statusElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Connection Error';
+            statusElem.style.color = '#FF5555';
+        }
     }
 }
 
-let processedSignatures = new Set();
+let processedSignatures = new Set<string>();
 
-async function fetchLiveTransactions() {
+async function fetchLiveTransactions(): Promise<void> {
     try {
         if (!networkStats.blockHeight || networkStats.blockHeight === 0) {
             console.log('Waiting for block height...');
@@ -276,8 +301,8 @@ async function fetchLiveTransactions() {
             ]
         });
 
-        const data = await response.json();
-        const tbody = document.getElementById('liveTxFeed');
+        const data: RpcResponse<{ transactions: SolanaTransaction[] }> = await response.json();
+        const tbody = document.getElementById('liveTxFeed') as HTMLTableSectionElement;
 
         if (data.error) {
             console.log('Block fetch error:', data.error.message);
@@ -309,11 +334,12 @@ async function fetchLiveTransactions() {
                     
                     if (processedSignatures.size > 1000) {
                         const firstKey = processedSignatures.values().next().value;
-                        processedSignatures.delete(firstKey);
+                        if (firstKey) {
+                            processedSignatures.delete(firstKey);
+                        }
                     }
                 }
 
-                // Use current time for live feed since these are recent transactions
                 const time = new Date().toLocaleTimeString(undefined, {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -321,7 +347,7 @@ async function fetchLiveTransactions() {
                     hour12: true,
                     timeZoneName: 'short'
                 });
-                const fee = tx.meta ? (tx.meta.fee / 1000000000).toFixed(6) : '0';
+                const fee = tx.meta && tx.meta.fee !== undefined ? (tx.meta.fee / 1000000000).toFixed(6) : '0';
                 const status = tx.meta?.err ? 'Failed' : 'Success';
                 const type = detectTransactionType(tx);
                 const amount = calculateTransactionAmount(tx);
@@ -338,25 +364,25 @@ async function fetchLiveTransactions() {
                 
                 tbody.insertBefore(row, tbody.firstChild);
                 
-                if (tbody.children.length > 20) {
+                if (tbody.children.length > 20 && tbody.lastChild) {
                     tbody.removeChild(tbody.lastChild);
                 }
 
                 networkStats.totalAnalyzed++;
                 
-                if (typeof updateTxTypesChart === 'function') {
-                    updateTxTypesChart(type);
+                if (typeof (window as any).updateTxTypesChart === 'function') {
+                    (window as any).updateTxTypesChart(type);
                 }
                 
-                if (typeof updateAnalyticsStats === 'function') {
-                    updateAnalyticsStats({
+                if (typeof (window as any).updateAnalyticsStats === 'function') {
+                    (window as any).updateAnalyticsStats({
                         error: status === 'Failed',
                         amount: amount,
                         program: type
                     });
                 }
                 
-                if (typeof updateFeeChart === 'function' && fee) {
+                if (typeof (window as any).updateFeeChart === 'function' && fee) {
                     const feeNum = parseFloat(fee);
                     if (!window.recentFees) window.recentFees = [];
                     window.recentFees.push(feeNum);
@@ -364,22 +390,22 @@ async function fetchLiveTransactions() {
                     
                     const avgFee = window.recentFees.reduce((a, b) => a + b, 0) / window.recentFees.length;
                     const maxFee = Math.max(...window.recentFees);
-                    updateFeeChart(avgFee, maxFee);
+                    (window as any).updateFeeChart(avgFee, maxFee);
                 }
             });
 
-            document.getElementById('totalAnalyzed').textContent = networkStats.totalAnalyzed.toLocaleString();
+            const totalElem = document.getElementById('totalAnalyzed');
+            if (totalElem) totalElem.textContent = networkStats.totalAnalyzed.toLocaleString();
         }
     } catch (error) {
         console.error('Error fetching live transactions:', error);
     }
 }
 
-function detectTransactionType(tx) {
+function detectTransactionType(tx: SolanaTransaction): TransactionType {
     if (!tx.transaction?.message) return 'Transfer';
     
     const accountKeys = tx.transaction.message.accountKeys || [];
-    const instructions = tx.transaction.message.instructions || [];
     
     if (tx.meta?.innerInstructions || tx.meta?.logMessages) {
         const logs = tx.meta.logMessages || [];
@@ -393,7 +419,7 @@ function detectTransactionType(tx) {
         if (logsStr.includes('defi') || logsStr.includes('lend') || logsStr.includes('borrow')) return 'DeFi';
     }
     
-    const programIds = accountKeys.map(key => key.pubkey || key).filter(Boolean);
+    const programIds = accountKeys.map(key => typeof key === 'string' ? key : key.pubkey).filter(Boolean);
     const programString = programIds.join(' ');
     
     if (programString.includes('Vote111111111111111111111111111111111111111')) return 'Vote';
@@ -405,8 +431,9 @@ function detectTransactionType(tx) {
     
     if (tx.meta?.postBalances && tx.meta?.preBalances) {
         const hasSignificantChange = tx.meta.preBalances.some((pre, idx) => {
-            const post = tx.meta.postBalances[idx];
-            return Math.abs(post - pre) > 1000000000; // More than 1 SOL
+            const post = tx.meta?.postBalances?.[idx];
+            if (post === undefined) return false;
+            return Math.abs(post - pre) > 1000000000;
         });
         if (hasSignificantChange) return 'Transfer';
     }
@@ -414,7 +441,7 @@ function detectTransactionType(tx) {
     return 'Transfer';
 }
 
-function calculateTransactionAmount(tx) {
+function calculateTransactionAmount(tx: SolanaTransaction): string {
     if (!tx.meta) return '0';
     
     const preBalances = tx.meta.preBalances || [];
@@ -429,46 +456,67 @@ function calculateTransactionAmount(tx) {
     return maxChange.toFixed(4);
 }
 
-async function fetchTopWallets() {
+async function fetchTopWallets(): Promise<void> {
     const walletsContainer = document.getElementById('topWallets');
+    if (!walletsContainer) return;
     
-    const potentialWallets = [
-        { address: '52C9T2T7JRojtxumYnYZhyUmrN7kqzvCLc4Ksvjk7TxD', name: 'Top Holder #1' },
-        { address: '8BseXT9EtoEhBTKFFYkwTnjKSUZwhtmdKY2Jrj8j45Rt', name: 'Top Holder #2' },
-        { address: 'H6vpvhyv8nVeXsoE3GCyZ4q2EViENnzwTJzw5fe8LnFV', name: 'Top Holder #35' },
-        { address: 'FTX2jrw1p53AZSxFPPcrmVVGCvT7qcN9X5yLvF1sZYxf', name: 'FTX Estate Main' },
-        { address: '7VBa8Gid3Xh2MZvLxk5QD3nhCzFdAZnDm4a5vvNWsJnY', name: 'FTX/Alameda' },
-        { address: '3sxVPrLXUgNRAaKcQgR9kMFTS5WnPpafAVkqJzX2E3UV', name: 'Alameda Research' },
+    const potentialWallets: WalletInfo[] = [
+        // Prioritize wallets most likely to have large balances
         { address: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM', name: 'Binance Main' },
-        { address: 'FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5', name: 'Exchange Wallet' },
-        { address: 'H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS', name: 'Coinbase' },
         { address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', name: 'Binance Hot Wallet' },
+        { address: 'H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS', name: 'Coinbase' },
         { address: '2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm', name: 'Kraken' },
-        { address: 'Eg5jqooyG6ySaXKbQUu4Lpvu2SqUPZrNkM4zXs9iUDLJ', name: 'Crypto.com' },
         { address: '88881Hu2jGMfCs9tMu5Rr7Ah7WBNBuXqde4nR5ZmKYYy', name: 'OKX Exchange' },
+        { address: 'Eg5jqooyG6ySaXKbQUu4Lpvu2SqUPZrNkM4zXs9iUDLJ', name: 'Crypto.com' },
         { address: '4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T', name: 'Gate.io' },
-        { address: 'CXPeim1wQMkcTvEHx9QdhHe3uQreUdbxXJTLVAcWRbNt', name: 'Huobi Exchange' },
         { address: 'AHB94zKUASftTdqgdfiDSdnPJHkEFgMvSaQtRQMwgY4c', name: 'KuCoin' },
         { address: 'GuxBSrv5jnSwwPepkqnmkM7YCBSakKanbnw4BKMdda4F', name: 'Bitfinex' },
-        { address: 'nm1LeGksEwW3Kw9gSYH8vBqRbyZW4Fvr3EXfZH2bZxq', name: 'Unknown Whale 1' },
-        { address: 'BLwKzyYLamhJRZbLTYde1BpAHBAb96hQhU7SqXLSGKa3', name: 'Unknown Whale 2' },
-        { address: 'ARjxTFWE1T1WsKJxKvG7ETkJ3kYEZLfC91wyYkNbwYXv', name: 'Jump Trading' },
-        { address: '3yUDo43vdnJKqHLJBzXgLCqzFBsDZJ2hAjacVKGVJMUr', name: 'Alameda Research' },
+        { address: 'EFnVqfWKNFuDhaJNHeYSYKp1aCwLhmqQzz3wvJeA8eJH', name: 'Bybit Cold Wallet' },
+        { address: 'CXPeim1wQMkcTvEHx9QdhHe3uQreUdbxXJTLVAcWRbNt', name: 'Huobi Exchange' },
+        
+        // Staking pools and liquid staking
         { address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', name: 'Marinade Staked SOL' },
         { address: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', name: 'Jito Staked SOL' },
         { address: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1', name: 'BlazeStake Pool' },
+        { address: 'stSo1mDQTq6uPGaarxydEjzvky3QNYuzJYGgUQBVS2M', name: 'Lido Staked SOL' },
+        
+        // DeFi protocols
         { address: '7Np41oeYqPefeNQEHSv1UDhYrehxin3NStELsSKCT4K2', name: 'Orca Whirlpool' },
         { address: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', name: 'Raydium AMM V4' },
-        { address: 'EFnVqfWKNFuDhaJNHeYSYKp1aCwLhmqQzz3wvJeA8eJH', name: 'Bybit Cold Wallet' },
+        { address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', name: 'Jupiter Aggregator' },
+        
+        // Market makers and trading firms
+        { address: 'ARjxTFWE1T1WsKJxKvG7ETkJ3kYEZLfC91wyYkNbwYXv', name: 'Jump Trading' },
+        { address: '3yUDo43vdnJKqHLJBzXgLCqzFBsDZJ2hAjacVKGVJMUr', name: 'Alameda Research' },
         { address: '14kqryJUc9HKvgMUjN265z3vD9t8nFPAP7raQN3ePZBn', name: 'BitMEX' },
+        
+        // Large holders and institutions
+        { address: '52C9T2T7JRojtxumYnYZhyUmrN7kqzvCLc4Ksvjk7TxD', name: 'Top Holder #1' },
+        { address: '8BseXT9EtoEhBTKFFYkwTnjKSUZwhtmdKY2Jrj8j45Rt', name: 'Top Holder #2' },
+        { address: 'H6vpvhyv8nVeXsoE3GCyZ4q2EViENnzwTJzw5fe8LnFV', name: 'Top Holder #3' },
+        { address: '3KdEDGvJKBqfJXFNDhBUNcULyMiVnCthmVVggkmZp5Rj', name: 'Top Holder #4' },
+        { address: '7nnFLEKHMFgEQbYiE9U8xznbePEaFRjCULCwBrz9Y5Jx', name: 'Top Holder #5' },
+        
+        // Bankrupt/Estate wallets
+        { address: 'FTX2jrw1p53AZSxFPPcrmVVGCvT7qcN9X5yLvF1sZYxf', name: 'FTX Estate Main' },
+        { address: '7VBa8Gid3Xh2MZvLxk5QD3nhCzFdAZnDm4a5vvNWsJnY', name: 'FTX/Alameda' },
         { address: 'Dv8bBNQQWdnoJ2SmJ2aVaDWi5wPgLNBhqBhzjmX6SgAm', name: 'FTX Estate' },
         { address: 'BWe3inxV4gYKBdqMHS8UxN7AwNkhqNAaAfhcphw5baKp', name: 'Celsius Network' },
         { address: '8CvwxZ5A7RpKiDStjGMYkYt43NhcRPMtnKQQhdGX5PK9', name: 'Voyager Digital' },
         { address: '63LfDmNb3MQ8mw9MtZ2To9bEA2M71kZUUGq5tiJxcqj9', name: 'Genesis Trading' },
-        { address: 'E7horS2PiJYYZWpC6tanp3VgMupeAwyaWQMvWKaWvGXz', name: 'Three Arrows Capital' }
+        { address: 'E7horS2PiJYYZWpC6tanp3VgMupeAwyaWQMvWKaWvGXz', name: 'Three Arrows Capital' },
+        
+        // Additional exchange cold wallets
+        { address: 'FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5', name: 'Exchange Wallet' },
+        { address: '3sxVPrLXUgNRAaKcQgR9kMFTS5WnPpafAVkqJzX2E3UV', name: 'Alameda Research' },
+        { address: 'nm1LeGksEwW3Kw9gSYH8vBqRbyZW4Fvr3EXfZH2bZxq', name: 'Unknown Whale 1' },
+        { address: 'BLwKzyYLamhJRZbLTYde1BpAHBAb96hQhU7SqXLSGKa3', name: 'Unknown Whale 2' },
+        { address: '5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9', name: 'Unknown Whale 3' },
+        { address: '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E', name: 'Unknown Whale 4' },
+        { address: 'HBZY42BfG6PJqPQ8s1GuxVkVQvRYWvAyt9aDZzScsQyp', name: 'Unknown Whale 5' }
     ];
 
-    const verifiedWhales = [];
+    const verifiedWhales: WalletInfo[] = [];
     walletsContainer.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>Verifying whale wallets...</p></div>';
     
     for (const wallet of potentialWallets) {
@@ -480,7 +528,7 @@ async function fetchTopWallets() {
                 params: [wallet.address]
             });
             
-            const data = await response.json();
+            const data: RpcResponse<{ value: number }> = await response.json();
             if (data.result) {
                 const balance = data.result.value / 1000000000;
                 
@@ -500,7 +548,7 @@ async function fetchTopWallets() {
         }
     }
     
-    verifiedWhales.sort((a, b) => b.balance - a.balance);
+    verifiedWhales.sort((a, b) => (b.balance || 0) - (a.balance || 0));
     
     let html = '';
     if (verifiedWhales.length > 0) {
@@ -511,11 +559,11 @@ async function fetchTopWallets() {
                     <div class="wallet-address">${wallet.name}</div>
                     <div class="wallet-stats">
                         <div class="wallet-stat">
-                            <div class="wallet-stat-value">${wallet.balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                            <div class="wallet-stat-value">${wallet.balance?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                             <div class="wallet-stat-label">SOL Balance</div>
                         </div>
                         <div class="wallet-stat">
-                            <div class="wallet-stat-value">${currencySymbols[selectedCurrency]}${(wallet.usdValue / 1000000).toFixed(1)}M</div>
+                            <div class="wallet-stat-value">${currencySymbols[selectedCurrency]}${((wallet.usdValue || 0) / 1000000).toFixed(1)}M</div>
                             <div class="wallet-stat-label">${selectedCurrency} Value</div>
                         </div>
                     </div>
@@ -529,10 +577,11 @@ async function fetchTopWallets() {
     walletsContainer.innerHTML = html;
 }
 
-async function fetchPopularTokens() {
+async function fetchPopularTokens(): Promise<void> {
     const tokensContainer = document.getElementById('popularTokens');
+    if (!tokensContainer) return;
     
-    const popularTokens = [
+    const popularTokens: TokenInfo[] = [
         { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', name: 'USD Coin', symbol: 'USDC' },
         { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', name: 'Tether', symbol: 'USDT' },
         { address: '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj', name: 'Lido Staked SOL', symbol: 'stSOL' },
@@ -543,7 +592,7 @@ async function fetchPopularTokens() {
         { address: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3', name: 'Pyth Network', symbol: 'PYTH' }
     ];
 
-    const verifiedTokens = [];
+    const verifiedTokens: TokenInfo[] = [];
     tokensContainer.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>Loading popular tokens...</p></div>';
     
     for (const token of popularTokens) {
@@ -555,7 +604,7 @@ async function fetchPopularTokens() {
                 params: [token.address]
             });
             
-            const data = await response.json();
+            const data: RpcResponse<{ value: { amount: string; decimals: number } }> = await response.json();
             
             if (data.result?.value) {
                 const amount = parseFloat(data.result.value.amount);
@@ -603,30 +652,35 @@ async function fetchPopularTokens() {
     tokensContainer.innerHTML = html || '<div class="loading-card"><p>Unable to load token data</p></div>';
 }
 
-function updateNetworkActivity() {
+function updateNetworkActivity(): void {
     updateValueWithAnimation('hourlyTx', networkStats.hourlyTransactions, v => v.toLocaleString());
     updateValueWithAnimation('peakTps', networkStats.peakTps, v => v.toLocaleString());
     
-    if (blockTimes.length > 1) {
-        const avgTime = blockTimes.reduce((a, b) => a + b, 0) / blockTimes.length;
-        document.getElementById('avgBlockTime').textContent = `${avgTime.toFixed(1)}s`;
-    } else {
-        document.getElementById('avgBlockTime').textContent = '~0.4s';
+    const avgBlockTimeElem = document.getElementById('avgBlockTime');
+    if (avgBlockTimeElem) {
+        if (blockTimes.length > 1) {
+            const avgTime = blockTimes.reduce((a, b) => a + b, 0) / blockTimes.length;
+            avgBlockTimeElem.textContent = `${avgTime.toFixed(1)}s`;
+        } else {
+            avgBlockTimeElem.textContent = '~0.4s';
+        }
     }
     
     const maxTps = 65000;
     const load = Math.min(100, (networkStats.tps / maxTps) * 100);
-    document.getElementById('networkLoad').textContent = `${load.toFixed(1)}%`;
+    const loadElem = document.getElementById('networkLoad');
+    if (loadElem) loadElem.textContent = `${load.toFixed(1)}%`;
     
-    if (typeof updateActivityChart === 'function') {
-        updateActivityChart(load);
+    if (typeof (window as any).updateActivityChart === 'function') {
+        (window as any).updateActivityChart(load);
     }
 }
 
-let recentBigTransactions = [];
+let recentBigTransactions: BigTransaction[] = [];
 
-async function fetchBigTransactions() {
+async function fetchBigTransactions(): Promise<void> {
     const container = document.getElementById('bigTransactions');
+    if (!container) return;
     
     try {
         if (!networkStats.blockHeight || networkStats.blockHeight === 0) {
@@ -649,7 +703,7 @@ async function fetchBigTransactions() {
             ]
         });
 
-        const data = await response.json();
+        const data: RpcResponse<{ transactions: SolanaTransaction[]; blockTime?: number }> = await response.json();
         
         if (data.result?.transactions) {
             const now = Date.now();
@@ -669,7 +723,7 @@ async function fetchBigTransactions() {
                                 signature: signature,
                                 type: detectTransactionType(tx),
                                 timestamp: now,
-                                blockTime: data.result.blockTime
+                                blockTime: data.result!.blockTime
                             });
                         }
                     }
@@ -690,7 +744,6 @@ async function fetchBigTransactions() {
             } else {
                 topTransactions.forEach(tx => {
                     const timeAgo = getTimeAgo(tx.timestamp);
-                    // Use the timestamp when we found the transaction, not the blockchain time
                     const localTime = formatLocalTime(tx.timestamp);
                     const usdValue = (tx.amount * networkStats.solPrice).toLocaleString(undefined, {
                         style: 'currency',
@@ -721,7 +774,7 @@ async function fetchBigTransactions() {
     }
 }
 
-function getTimeAgo(timestamp) {
+function getTimeAgo(timestamp: number): string {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
     
     if (seconds < 60) return 'just now';
@@ -731,7 +784,7 @@ function getTimeAgo(timestamp) {
     return `${Math.floor(seconds / 3600)} hours ago`;
 }
 
-function formatLocalTime(timestamp) {
+function formatLocalTime(timestamp: number): string {
     return new Date(timestamp).toLocaleTimeString(undefined, {
         hour: '2-digit',
         minute: '2-digit',
@@ -740,12 +793,12 @@ function formatLocalTime(timestamp) {
     });
 }
 
-function getUserTimezone() {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
+// function getUserTimezone(): string {
+//     return Intl.DateTimeFormat().resolvedOptions().timeZone;
+// } // Reserved for future use
 
 let lastBlockTime = Date.now();
-function trackBlockTime() {
+function trackBlockTime(): void {
     const now = Date.now();
     const timeDiff = (now - lastBlockTime) / 1000;
     
@@ -756,28 +809,32 @@ function trackBlockTime() {
     
     lastBlockTime = now;
     
-    if (typeof updateBlockTimeChart === 'function') {
+    if (typeof (window as any).updateBlockTimeChart === 'function') {
         const blockTimeMs = timeDiff * 1000;
-        updateBlockTimeChart(blockTimeMs);
+        (window as any).updateBlockTimeChart(blockTimeMs);
     }
 }
 
-function initTheme() {
+function initTheme(): void {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
 }
 
-function toggleTheme() {
+function toggleTheme(): void {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     updateThemeIcon(newTheme);
+    
+    if (typeof window.reinitializeChartsForTheme === 'function') {
+        window.reinitializeChartsForTheme();
+    }
 }
 
-function updateThemeIcon(theme) {
+function updateThemeIcon(theme: string): void {
     const themeIcon = document.getElementById('themeIcon');
     if (themeIcon) {
         themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
@@ -796,10 +853,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await detectUserCurrency();
     
-    const currencySelector = document.getElementById('currencySelector');
+    const currencySelector = document.getElementById('currencySelector') as HTMLSelectElement;
     if (currencySelector) {
         currencySelector.addEventListener('change', async (e) => {
-            selectedCurrency = e.target.value;
+            selectedCurrency = (e.target as HTMLSelectElement).value as Currency;
             console.log(`Currency changed to ${selectedCurrency}`);
             
             await fetchNetworkStats();
@@ -810,7 +867,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const savedCurrency = localStorage.getItem('preferredCurrency');
         if (savedCurrency && currencySymbols[savedCurrency]) {
-            selectedCurrency = savedCurrency;
+            selectedCurrency = savedCurrency as Currency;
             currencySelector.value = savedCurrency;
             console.log(`Using saved currency preference: ${savedCurrency}`);
         }
@@ -839,4 +896,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 60000);
 });
 
-console.log('Solanalysis by Jeffrey Goh - Live Blockchain Analysis');
+console.log('Solanalysis by Jeffrey Goh - Blockchain Analysis');
+
+window.toggleTheme = toggleTheme;

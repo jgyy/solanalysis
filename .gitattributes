@@ -1,20 +1,36 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# HTML files
-*.html text
-*.htm text
-
-# CSS files
-*.css text
-
-# JavaScript files
-*.js text
+# Source code
+*.ts text diff=typescript
+*.tsx text diff=typescript
+*.js text diff=javascript
+*.jsx text diff=javascript
 *.json text
+*.json5 text
+*.mjs text diff=javascript
+*.cjs text diff=javascript
 
-# Markdown files
-*.md text
-*.markdown text
+# Web files
+*.html text diff=html
+*.htm text diff=html
+*.css text diff=css
+*.scss text diff=css
+*.sass text diff=css
+*.less text diff=css
+*.svg text
+
+# Markdown and documentation
+*.md text diff=markdown
+*.mdx text diff=markdown
+*.markdown text diff=markdown
+README text
+LICENSE text
+AUTHORS text
+CONTRIBUTORS text
+CHANGELOG text
+HISTORY text
+NOTICE text
 
 # Configuration files
 *.yml text
@@ -23,10 +39,30 @@
 *.ini text
 *.cfg text
 *.conf text
+*.config text
+.env text
+.env.* text
+.editorconfig text
+.prettierrc text
+.eslintrc text
+.browserslistrc text
+tsconfig.json text
+jsconfig.json text
+package.json text eol=lf
+package-lock.json text eol=lf -diff
+yarn.lock text eol=lf -diff
+pnpm-lock.yaml text eol=lf -diff
 
-# Shell scripts
+# Docker
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text
+
+# Shell scripts (Unix)
 *.sh text eol=lf
 *.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
 
 # Windows scripts
 *.bat text eol=crlf
@@ -37,32 +73,84 @@
 .gitattributes text
 .gitignore text
 .gitconfig text
+.gitmodules text
 
-# License and readme
-LICENSE text
-README text
+# Build artifacts (binary)
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.lib binary
+*.a binary
+*.node binary
+*.wasm binary
 
-# Image files
+# Images
 *.jpg binary
 *.jpeg binary
 *.png binary
 *.gif binary
+*.webp binary
 *.ico binary
-*.svg text
+*.bmp binary
+*.tiff binary
+*.tif binary
 
-# Font files
+# Fonts
 *.ttf binary
 *.otf binary
 *.woff binary
 *.woff2 binary
 *.eot binary
 
-# Exclude files from GitHub language statistics
-*.css linguist-vendored=false
-*.js linguist-vendored=false
-*.html linguist-vendored=false
+# Audio/Video
+*.mp3 binary
+*.mp4 binary
+*.wav binary
+*.avi binary
+*.mov binary
+*.webm binary
 
-# Set repository language
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.rar binary
+
+# Documents
+*.pdf binary
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+
+# Generated files
+dist/** -diff linguist-generated=true
+build/** -diff linguist-generated=true
+*.min.js -diff linguist-generated=true
+*.min.css -diff linguist-generated=true
+*.map -diff linguist-generated=true
+
+# Vendor files
+node_modules/** -diff linguist-vendored=true
+vendor/** -diff linguist-vendored=true
+
+# GitHub Linguist overrides
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
 *.js linguist-language=JavaScript
+*.jsx linguist-language=JavaScript
 *.html linguist-language=HTML
 *.css linguist-language=CSS
+
+# Detectable languages
+*.ts linguist-detectable=true
+*.js linguist-detectable=true
+*.html linguist-detectable=true
+*.css linguist-detectable=true
+
+# Main language (TypeScript now)
+linguist-language=TypeScript

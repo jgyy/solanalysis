@@ -14,3 +14,9 @@ README.md
 Dockerfile
 docker-compose.yml
 .dockerignore
+logs
+data
+terraform
+dist
+.npm
+.cache

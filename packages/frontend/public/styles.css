@@ -14,6 +14,10 @@
     --gradient-end: #e9ecef;
     --shadow-color: rgba(0, 0, 0, 0.1);
     --hover-shadow: rgba(0, 215, 50, 0.15);
+    --tx-nft-color: #FF6B6B;
+    --tx-token-color: #4ECDC4;
+    --tx-vote-color: #696969;
+    --tx-defi-color: #FFD700;
 }
 
 [data-theme="dark"] {
@@ -32,6 +36,10 @@
     --gradient-end: #141332;
     --shadow-color: rgba(0, 0, 0, 0.3);
     --hover-shadow: rgba(20, 241, 149, 0.2);
+    --tx-nft-color: #FF8A8A;
+    --tx-token-color: #6EFFF7;
+    --tx-vote-color: #A0A0A0;
+    --tx-defi-color: #FFE666;
 }
 
 @keyframes valueUpdate {
@@ -575,10 +583,10 @@ body {
 .tx-type-transfer { color: var(--primary-color); }
 .tx-type-swap { color: var(--secondary-color); }
 .tx-type-stake { color: var(--warning); }
-.tx-type-nft { color: #FF6B6B; }
-.tx-type-token { color: #4ECDC4; }
-.tx-type-vote { color: #696969; }
-.tx-type-defi { color: #FFD700; }
+.tx-type-nft { color: var(--tx-nft-color); }
+.tx-type-token { color: var(--tx-token-color); }
+.tx-type-vote { color: var(--tx-vote-color); }
+.tx-type-defi { color: var(--tx-defi-color); }
 
 .status-success { color: var(--success); }
 .status-failed { color: var(--error); }
@@ -653,13 +661,21 @@ body {
 }
 
 .stat-change.positive {
-    color: #14F195;
+    color: var(--success);
     background: rgba(20, 241, 149, 0.1);
 }
 
+[data-theme="dark"] .stat-change.positive {
+    background: rgba(20, 241, 149, 0.15);
+}
+
 .stat-change.negative {
-    color: #FF5555;
+    color: var(--error);
     background: rgba(255, 85, 85, 0.1);
+}
+
+[data-theme="dark"] .stat-change.negative {
+    background: rgba(255, 85, 85, 0.15);
 }
 
 @media (max-width: 768px) {

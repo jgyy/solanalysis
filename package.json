@@ -1,18 +1,45 @@
 {
-  "name": "solanalysis",
+  "name": "solanalysis-monorepo",
   "version": "1.0.0",
-  "description": "Blockchain analysis website for Solana network",
-  "main": "index.html",
+  "private": true,
+  "description": "Solanalysis - Real-time Solana blockchain analysis platform",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "npm run dev --workspace=@solanalysis/backend & npm run dev --workspace=@solanalysis/frontend",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=@solanalysis/backend",
+    "build:frontend": "npm run build --workspace=@solanalysis/frontend",
+    "build:shared": "npm run build --workspace=@solanalysis/shared",
+    "start": "npm run start --workspace=@solanalysis/backend",
+    "clean": "npm run clean --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "install:all": "npm install"
   },
-  "keywords": ["blockchain", "solana", "analysis", "crypto"],
+  "keywords": [
+    "solana",
+    "blockchain",
+    "analytics",
+    "typescript",
+    "monorepo",
+    "real-time"
+  ],
   "author": "Jeffrey Goh",
   "license": "MIT",
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "axios": "^1.6.0"
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
   }
 }

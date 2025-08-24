@@ -1,0 +1,25 @@
+{
+  "name": "@solanalysis/frontend",
+  "version": "1.0.0",
+  "description": "Frontend client for Solanalysis",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc && npm run bundle",
+    "bundle": "esbuild src/app.ts src/charts.ts --bundle --minify --sourcemap --target=es2020 --outdir=dist",
+    "dev": "concurrently \"tsc --watch\" \"esbuild src/app.ts src/charts.ts --bundle --sourcemap --target=es2020 --outdir=dist --watch\" \"npx http-server public -p 5000 -c-1\"",
+    "serve": "npx http-server public -p 5000 -c-1",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solanalysis/shared": "file:../shared",
+    "chart.js": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "esbuild": "^0.19.8",
+    "concurrently": "^8.2.2"
+  }
+}

@@ -64,22 +64,6 @@ docker tag solanalysis:latest YOUR_ECR_URI
 docker push YOUR_ECR_URI
 ```
 
-### Google Cloud Run
-```bash
-gcloud run deploy solanalysis --image solanalysis:latest --port 3000 --allow-unauthenticated
-```
-
-### Azure
-```bash
-az container create --name solanalysis --image solanalysis:latest --ports 3000 --ip-address public
-```
-
-### Heroku
-```bash
-heroku container:push web
-heroku container:release web
-```
-
 ## Development
 
 ```bash
