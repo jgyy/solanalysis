@@ -8,7 +8,7 @@
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

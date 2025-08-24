@@ -12,7 +12,7 @@
     "synth": "cdk synth",
     "diff": "cdk diff",
     "bootstrap": "cdk bootstrap",
-    "clean": "rm -rf dist cdk.out"
+    "clean": "rimraf dist cdk.out"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.150.0",
