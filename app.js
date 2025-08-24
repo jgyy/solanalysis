@@ -1,4 +1,4 @@
-const PROXY_URL = 'http://localhost:3001';
+const PROXY_URL = 'http://localhost:3000';
 
 async function fetchWithFallback(body) {
     try {
@@ -195,6 +195,10 @@ async function fetchNetworkStats() {
                 networkStats.hourlyTransactions += samples[0].numTransactions;
                 
                 updateValueWithAnimation('networkTps', networkStats.tps, v => v.toLocaleString());
+                
+                if (typeof updateTPSChart === 'function') {
+                    updateTPSChart(networkStats.tps);
+                }
             } else {
                 console.log('No valid performance samples received');
                 document.getElementById('networkTps').textContent = '---';
@@ -222,6 +226,10 @@ async function fetchNetworkStats() {
             if (price > 0) {
                 networkStats.solPrice = price;
                 updateValueWithAnimation('solPrice', price, v => formatPrice(v, selectedCurrency));
+                
+                if (typeof updatePriceChart === 'function') {
+                    updatePriceChart(price);
+                }
             } else {
                 document.getElementById('solPrice').textContent = `${currencySymbols[selectedCurrency]}---`;
             }
@@ -335,6 +343,29 @@ async function fetchLiveTransactions() {
                 }
 
                 networkStats.totalAnalyzed++;
+                
+                if (typeof updateTxTypesChart === 'function') {
+                    updateTxTypesChart(type);
+                }
+                
+                if (typeof updateAnalyticsStats === 'function') {
+                    updateAnalyticsStats({
+                        error: status === 'Failed',
+                        amount: amount,
+                        program: type
+                    });
+                }
+                
+                if (typeof updateFeeChart === 'function' && fee) {
+                    const feeNum = parseFloat(fee);
+                    if (!window.recentFees) window.recentFees = [];
+                    window.recentFees.push(feeNum);
+                    if (window.recentFees.length > 100) window.recentFees.shift();
+                    
+                    const avgFee = window.recentFees.reduce((a, b) => a + b, 0) / window.recentFees.length;
+                    const maxFee = Math.max(...window.recentFees);
+                    updateFeeChart(avgFee, maxFee);
+                }
             });
 
             document.getElementById('totalAnalyzed').textContent = networkStats.totalAnalyzed.toLocaleString();
@@ -586,6 +617,10 @@ function updateNetworkActivity() {
     const maxTps = 65000;
     const load = Math.min(100, (networkStats.tps / maxTps) * 100);
     document.getElementById('networkLoad').textContent = `${load.toFixed(1)}%`;
+    
+    if (typeof updateActivityChart === 'function') {
+        updateActivityChart(load);
+    }
 }
 
 let recentBigTransactions = [];
@@ -720,6 +755,11 @@ function trackBlockTime() {
     }
     
     lastBlockTime = now;
+    
+    if (typeof updateBlockTimeChart === 'function') {
+        const blockTimeMs = timeDiff * 1000;
+        updateBlockTimeChart(blockTimeMs);
+    }
 }
 
 function initTheme() {

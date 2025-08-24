@@ -1,12 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
-const PORT = 3001;
+const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static(__dirname));
 
 const RPC_ENDPOINTS = [
     'https://mainnet.helius-rpc.com/?api-key=2e0b1f65-e2d9-4a7f-b25f-ce8d2e3f8e2a',
@@ -115,7 +118,12 @@ app.get('/price/solana/:currency?', async (req, res) => {
     }
 });
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.listen(PORT, () => {
-    console.log(`Proxy server running on http://localhost:${PORT}`);
-    console.log('This proxy helps bypass CORS restrictions for Solana RPC calls');
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Serving website at http://localhost:${PORT}`);
+    console.log('Proxy endpoints available at /solana-rpc and /price/solana/:currency');
 });
