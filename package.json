@@ -11,7 +11,6 @@
     "build": "npm run build --workspaces",
     "build:backend": "npm run build --workspace=@solanalysis/backend",
     "build:frontend": "npm run build --workspace=@solanalysis/frontend",
-    "build:shared": "npm run build --workspace=@solanalysis/shared",
     "start": "npm run start --workspace=@solanalysis/backend",
     "clean": "npm run clean --workspaces",
     "test": "npm run test --workspaces --if-present",
@@ -34,7 +33,7 @@
   "author": "Jeffrey Goh",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=20.0.0",
     "npm": ">=9.0.0"
   },
   "devDependencies": {

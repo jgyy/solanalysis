@@ -1,13 +1,28 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy the entire monorepo
-COPY . .
+# Copy package files from monorepo root and packages
+COPY package*.json ./
+COPY packages/backend/package*.json ./packages/backend/
+COPY packages/frontend/package*.json ./packages/frontend/
+COPY packages/infrastructure/package*.json ./packages/infrastructure/
 
-# Install and build everything
-RUN npm install
-RUN npm run build
+# Install dependencies at root level
+RUN npm ci
+
+# Copy source code
+COPY packages/backend/src ./packages/backend/src
+COPY packages/backend/tsconfig.json ./packages/backend/
+COPY packages/frontend/src ./packages/frontend/src
+COPY packages/frontend/tsconfig.json ./packages/frontend/
+COPY packages/frontend/public ./packages/frontend/public
+COPY packages/infrastructure/src ./packages/infrastructure/src
+COPY packages/infrastructure/tsconfig.json ./packages/infrastructure/
+COPY tsconfig.json ./
+
+# Build only the frontend
+RUN npm run build:frontend
 
 FROM nginx:alpine
 
@@ -52,6 +67,13 @@ RUN echo 'server { \
     \
     location /price/ { \
         proxy_pass http://backend:3000/price/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+    \
+    location /analytics/ { \
+        proxy_pass http://backend:3000/analytics/; \
         proxy_http_version 1.1; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \

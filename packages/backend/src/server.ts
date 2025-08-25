@@ -11,6 +11,64 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+interface AnalyticsCache {
+    tpsHistory: { time: string; value: number }[];
+    priceHistory: { time: string; value: number }[];
+    txTypeStats: { [key: string]: number };
+    activityData: { time: string; value: number }[];
+    blockTimeData: { time: string; value: number }[];
+    feeData: { time: string; avg: number; max: number }[];
+    networkStats: {
+        tps: number;
+        blockHeight: number;
+        solPrice: number;
+        validators: number;
+        peakTps: number;
+        hourlyTransactions: number;
+        totalAnalyzed: number;
+    };
+    bigTransactions: {
+        amount: number;
+        signature: string;
+        type: string;
+        timestamp: number;
+        blockTime?: number;
+    }[];
+    lastUpdated: number;
+}
+
+let analyticsCache: AnalyticsCache = {
+    tpsHistory: [],
+    priceHistory: [],
+    txTypeStats: {
+        Transfer: 0,
+        Swap: 0,
+        NFT: 0,
+        Token: 0,
+        DeFi: 0,
+        Stake: 0,
+        Vote: 0,
+        Other: 0
+    },
+    activityData: [],
+    blockTimeData: [],
+    feeData: [],
+    networkStats: {
+        tps: 0,
+        blockHeight: 0,
+        solPrice: 0,
+        validators: 0,
+        peakTps: 0,
+        hourlyTransactions: 0,
+        totalAnalyzed: 0
+    },
+    bigTransactions: [],
+    lastUpdated: Date.now()
+};
+
+const MAX_DATA_POINTS = 60;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 app.use(cors({
     origin: [
         'http://localhost',
@@ -30,6 +88,178 @@ app.use(express.json());
 
 app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+app.get('/analytics/cache', (_req: Request, res: Response) => {
+    const now = Date.now();
+    if (now - analyticsCache.lastUpdated > CACHE_DURATION) {
+        analyticsCache = {
+            tpsHistory: [],
+            priceHistory: [],
+            txTypeStats: {
+                Transfer: 0,
+                Swap: 0,
+                NFT: 0,
+                Token: 0,
+                DeFi: 0,
+                Stake: 0,
+                Vote: 0,
+                Other: 0
+            },
+            activityData: [],
+            blockTimeData: [],
+            feeData: [],
+            networkStats: {
+                tps: 0,
+                blockHeight: 0,
+                solPrice: 0,
+                validators: 0,
+                peakTps: 0,
+                hourlyTransactions: 0,
+                totalAnalyzed: 0
+            },
+            bigTransactions: [],
+            lastUpdated: now
+        };
+    }
+    res.json(analyticsCache);
+});
+
+app.post('/analytics/cache', (req: Request, res: Response) => {
+    const updates = req.body;
+    
+    if (updates.tpsHistory) {
+        analyticsCache.tpsHistory = updates.tpsHistory;
+        if (analyticsCache.tpsHistory.length > MAX_DATA_POINTS) {
+            analyticsCache.tpsHistory = analyticsCache.tpsHistory.slice(-MAX_DATA_POINTS);
+        }
+    }
+    
+    if (updates.priceHistory) {
+        analyticsCache.priceHistory = updates.priceHistory;
+        if (analyticsCache.priceHistory.length > MAX_DATA_POINTS) {
+            analyticsCache.priceHistory = analyticsCache.priceHistory.slice(-MAX_DATA_POINTS);
+        }
+    }
+    
+    if (updates.txTypeStats) {
+        analyticsCache.txTypeStats = updates.txTypeStats;
+    }
+    
+    if (updates.activityData) {
+        analyticsCache.activityData = updates.activityData;
+        if (analyticsCache.activityData.length > 24) {
+            analyticsCache.activityData = analyticsCache.activityData.slice(-24);
+        }
+    }
+    
+    if (updates.blockTimeData) {
+        analyticsCache.blockTimeData = updates.blockTimeData;
+        if (analyticsCache.blockTimeData.length > MAX_DATA_POINTS) {
+            analyticsCache.blockTimeData = analyticsCache.blockTimeData.slice(-MAX_DATA_POINTS);
+        }
+    }
+    
+    if (updates.feeData) {
+        analyticsCache.feeData = updates.feeData;
+        if (analyticsCache.feeData.length > MAX_DATA_POINTS) {
+            analyticsCache.feeData = analyticsCache.feeData.slice(-MAX_DATA_POINTS);
+        }
+    }
+    
+    if (updates.networkStats) {
+        analyticsCache.networkStats = { ...analyticsCache.networkStats, ...updates.networkStats };
+    }
+    
+    if (updates.bigTransactions) {
+        analyticsCache.bigTransactions = updates.bigTransactions;
+        const oneDayAgo = Date.now() - CACHE_DURATION;
+        analyticsCache.bigTransactions = analyticsCache.bigTransactions.filter(
+            tx => tx.timestamp > oneDayAgo
+        );
+    }
+    
+    analyticsCache.lastUpdated = Date.now();
+    
+    res.json({ success: true, lastUpdated: analyticsCache.lastUpdated });
+});
+
+app.post('/analytics/append', (req: Request, res: Response) => {
+    const { type, data } = req.body;
+    
+    switch (type) {
+        case 'tps':
+            if (data) {
+                analyticsCache.tpsHistory.push(data);
+                if (analyticsCache.tpsHistory.length > MAX_DATA_POINTS) {
+                    analyticsCache.tpsHistory.shift();
+                }
+            }
+            break;
+        case 'price':
+            if (data) {
+                analyticsCache.priceHistory.push(data);
+                if (analyticsCache.priceHistory.length > MAX_DATA_POINTS) {
+                    analyticsCache.priceHistory.shift();
+                }
+            }
+            break;
+        case 'txType':
+            if (data && analyticsCache.txTypeStats[data]) {
+                analyticsCache.txTypeStats[data]++;
+            } else if (data) {
+                analyticsCache.txTypeStats.Other++;
+            }
+            break;
+        case 'activity':
+            if (data) {
+                analyticsCache.activityData.push(data);
+                if (analyticsCache.activityData.length > 24) {
+                    analyticsCache.activityData.shift();
+                }
+            }
+            break;
+        case 'blockTime':
+            if (data) {
+                analyticsCache.blockTimeData.push(data);
+                if (analyticsCache.blockTimeData.length > MAX_DATA_POINTS) {
+                    analyticsCache.blockTimeData.shift();
+                }
+            }
+            break;
+        case 'fee':
+            if (data) {
+                analyticsCache.feeData.push(data);
+                if (analyticsCache.feeData.length > MAX_DATA_POINTS) {
+                    analyticsCache.feeData.shift();
+                }
+            }
+            break;
+        case 'networkStats':
+            if (data) {
+                analyticsCache.networkStats = { ...analyticsCache.networkStats, ...data };
+            }
+            break;
+        case 'bigTransaction':
+            if (data) {
+                // Check if transaction already exists
+                const exists = analyticsCache.bigTransactions.find(tx => tx.signature === data.signature);
+                if (!exists) {
+                    analyticsCache.bigTransactions.push(data);
+                    // Keep only transactions from last 24 hours
+                    const oneDayAgo = Date.now() - CACHE_DURATION;
+                    analyticsCache.bigTransactions = analyticsCache.bigTransactions.filter(
+                        tx => tx.timestamp > oneDayAgo
+                    );
+                    // Sort by amount
+                    analyticsCache.bigTransactions.sort((a, b) => b.amount - a.amount);
+                }
+            }
+            break;
+    }
+    
+    analyticsCache.lastUpdated = Date.now();
+    res.json({ success: true, type, lastUpdated: analyticsCache.lastUpdated });
 });
 
 app.post('/solana-rpc', async (req: Request, res: Response) => {

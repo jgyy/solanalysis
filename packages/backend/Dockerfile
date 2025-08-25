@@ -1,20 +1,34 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY . .
+# Copy package files from monorepo root and packages
+COPY package*.json ./
+COPY packages/backend/package*.json ./packages/backend/
+COPY packages/frontend/package*.json ./packages/frontend/
+COPY packages/infrastructure/package*.json ./packages/infrastructure/
 
-RUN npm install
-RUN npm run build
+# Install dependencies at root level
+RUN npm ci
 
-FROM node:18-alpine
+# Copy source code
+COPY packages/backend/src ./packages/backend/src
+COPY packages/backend/tsconfig.json ./packages/backend/
+COPY packages/frontend/src ./packages/frontend/src
+COPY packages/frontend/tsconfig.json ./packages/frontend/
+COPY packages/infrastructure/src ./packages/infrastructure/src
+COPY packages/infrastructure/tsconfig.json ./packages/infrastructure/
+COPY tsconfig.json ./
+
+# Build only the backend
+RUN npm run build:backend
+
+FROM node:20-alpine
 
 WORKDIR /app
 
 COPY --from=builder /app/packages/backend/package*.json ./
 COPY --from=builder /app/packages/backend/dist ./dist
-
-COPY --from=builder /app/packages/shared /app/packages/shared
 
 RUN npm install --omit=dev
 

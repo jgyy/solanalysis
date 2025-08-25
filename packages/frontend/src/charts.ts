@@ -15,12 +15,31 @@ import {
     Legend,
     Filler
 } from 'chart.js';
-import type { 
-  ChartDataPoint, 
-  FeeDataPoint, 
-  TransactionTypeStats,
-  TransactionType
-} from '@solanalysis/shared';
+
+// Type definitions
+interface ChartDataPoint {
+    time: string;
+    value: number;
+}
+
+interface FeeDataPoint {
+    time: string;
+    avg: number;
+    max: number;
+}
+
+interface TransactionTypeStats {
+    Transfer: number;
+    Swap: number;
+    NFT: number;
+    Token: number;
+    DeFi: number;
+    Stake: number;
+    Vote: number;
+    Other: number;
+}
+
+type TransactionType = 'Transfer' | 'Swap' | 'NFT' | 'Token' | 'DeFi' | 'Stake' | 'Vote' | 'Other';
 
 Chart.register(
     CategoryScale,
@@ -644,6 +663,77 @@ function reinitializeChartsForTheme(): void {
     }, 50);
 }
 
+// Function to get current chart data for caching
+function getChartData() {
+    return {
+        tpsHistory,
+        priceHistory,
+        txTypeStats,
+        activityData,
+        blockTimeData,
+        feeData
+    };
+}
+
+// Function to restore chart data from cache
+function restoreChartData(cachedData: any): void {
+    if (cachedData.tpsHistory) {
+        tpsHistory = cachedData.tpsHistory;
+    }
+    if (cachedData.priceHistory) {
+        priceHistory = cachedData.priceHistory;
+    }
+    if (cachedData.txTypeStats) {
+        txTypeStats = cachedData.txTypeStats;
+    }
+    if (cachedData.activityData) {
+        activityData = cachedData.activityData;
+    }
+    if (cachedData.blockTimeData) {
+        blockTimeData = cachedData.blockTimeData;
+    }
+    if (cachedData.feeData) {
+        feeData = cachedData.feeData;
+    }
+    
+    // Update all charts with restored data
+    if (tpsChart && tpsHistory.length > 0) {
+        tpsChart.data.labels = tpsHistory.map(h => h.time);
+        tpsChart.data.datasets[0].data = tpsHistory.map(h => h.value);
+        tpsChart.update('none');
+    }
+    
+    if (txTypesChart) {
+        txTypesChart.data.datasets[0].data = Object.values(txTypeStats);
+        txTypesChart.update('none');
+    }
+    
+    if (priceChart && priceHistory.length > 0) {
+        priceChart.data.labels = priceHistory.map(h => h.time);
+        priceChart.data.datasets[0].data = priceHistory.map(h => h.value);
+        priceChart.update('none');
+    }
+    
+    if (activityChart && activityData.length > 0) {
+        activityChart.data.labels = activityData.map(h => h.time);
+        activityChart.data.datasets[0].data = activityData.map(h => h.value);
+        activityChart.update('none');
+    }
+    
+    if (blockTimeChart && blockTimeData.length > 0) {
+        blockTimeChart.data.labels = blockTimeData.map(h => h.time);
+        blockTimeChart.data.datasets[0].data = blockTimeData.map(h => h.value);
+        blockTimeChart.update('none');
+    }
+    
+    if (feeChart && feeData.length > 0) {
+        feeChart.data.labels = feeData.map(h => h.time);
+        feeChart.data.datasets[0].data = feeData.map(h => h.avg);
+        feeChart.data.datasets[1].data = feeData.map(h => h.max);
+        feeChart.update('none');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         initCharts();
@@ -657,4 +747,6 @@ document.addEventListener('DOMContentLoaded', () => {
 (window as any).updateBlockTimeChart = updateBlockTimeChart;
 (window as any).updateFeeChart = updateFeeChart;
 (window as any).updateAnalyticsStats = updateAnalyticsStats;
-window.reinitializeChartsForTheme = reinitializeChartsForTheme;
+(window as any).getChartData = getChartData;
+(window as any).restoreChartData = restoreChartData;
+(window as any).reinitializeChartsForTheme = reinitializeChartsForTheme;

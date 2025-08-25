@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@solanalysis/shared": "file:../shared",
     "chart.js": "^4.4.0"
   },
   "devDependencies": {

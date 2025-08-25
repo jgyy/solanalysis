@@ -1,22 +1,101 @@
-import type { 
-  NetworkStats, 
-  WalletInfo, 
-  TokenInfo, 
-  BigTransaction, 
-  Currency, 
-  CurrencySymbols,
-  SolanaTransaction,
-  PerformanceSample,
-  RpcResponse,
-  PriceResponse,
-  LocationResponse,
-  TransactionType
-} from '@solanalysis/shared';
+// Type definitions
+interface NetworkStats {
+    tps: number;
+    blockHeight: number;
+    solPrice: number;
+    validators: number;
+    peakTps: number;
+    hourlyTransactions: number;
+    totalAnalyzed: number;
+}
 
-// When running in Docker with nginx, all requests go through nginx proxy
-// When running locally in dev, use localhost:3000 directly
+interface WalletInfo {
+    address: string;
+    name: string;
+    balance?: number;
+    usdValue?: number;
+}
+
+interface TokenInfo {
+    address: string;
+    name: string;
+    symbol: string;
+    supply?: number;
+    formattedSupply?: string;
+}
+
+interface BigTransaction {
+    amount: number;
+    signature: string;
+    type: string;
+    timestamp: number;
+    blockTime?: number;
+}
+
+type Currency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY' | 'INR' | 'KRW' | 'SGD' | 'BRL';
+type CurrencySymbols = { [key in Currency]: string };
+type TransactionType = 'Transfer' | 'Swap' | 'NFT' | 'Token' | 'DeFi' | 'Stake' | 'Vote' | 'Other';
+
+interface PerformanceSample {
+    numTransactions: number;
+    samplePeriodSecs: number;
+}
+
+interface RpcResponse<T> {
+    result?: T;
+    error?: {
+        message: string;
+        code: number;
+    };
+}
+
+interface PriceResponse {
+    price?: number;
+    data?: {
+        rates?: {
+            USD: number;
+            [key: string]: number;
+        };
+    };
+    solana?: {
+        usd: number;
+    };
+}
+
+interface LocationResponse {
+    country_code: string;
+    country_name: string;
+}
+
+interface SolanaTransaction {
+    meta?: {
+        err?: any;
+        fee?: number;
+        preBalances?: number[];
+        postBalances?: number[];
+        innerInstructions?: any[];
+        logMessages?: string[];
+    };
+    transaction: {
+        signatures?: string[];
+        message?: {
+            accountKeys?: (string | { pubkey: string })[];
+        };
+    };
+}
+
 const isDocker = window.location.port === '' || window.location.port === '80';
 const PROXY_URL = isDocker ? '' : 'http://localhost:3000';
+
+declare global {
+    interface Window {
+        reinitializeChartsForTheme?: () => void;
+        toggleTheme?: () => void;
+        recentFees?: number[];
+    }
+}
+
+export {};
 
 async function fetchWithFallback(body: any): Promise<Response> {
     try {
@@ -193,17 +272,17 @@ async function fetchNetworkStats(): Promise<void> {
         }
 
         if (perfData.result && perfData.result.length > 0) {
-            const samples = perfData.result.filter(sample => 
+            const samples = perfData.result.filter((sample: PerformanceSample) => 
                 sample && sample.numTransactions > 0 && sample.samplePeriodSecs > 0
             );
             
             if (samples.length > 0) {
-                const tpsValues = samples.map(sample => 
+                const tpsValues = samples.map((sample: PerformanceSample) => 
                     sample.numTransactions / sample.samplePeriodSecs
                 );
                 
                 const averageTps = Math.round(
-                    tpsValues.reduce((sum, tps) => sum + tps, 0) / tpsValues.length
+                    tpsValues.reduce((sum: number, tps: number) => sum + tps, 0) / tpsValues.length
                 );
                 
                 const currentTps = Math.round(samples[0].numTransactions / samples[0].samplePeriodSecs);
@@ -317,12 +396,12 @@ async function fetchLiveTransactions(): Promise<void> {
                 tbody.innerHTML = '';
             }
 
-            const nonVoteTransactions = data.result.transactions.filter(tx => {
+            const nonVoteTransactions = data.result.transactions.filter((tx: SolanaTransaction) => {
                 const type = detectTransactionType(tx);
                 return type !== 'Vote';
             });
 
-            nonVoteTransactions.slice(0, 10).forEach(tx => {
+            nonVoteTransactions.slice(0, 10).forEach((tx: SolanaTransaction) => {
                 const signature = tx.transaction.signatures?.[0];
                 
                 if (signature && processedSignatures.has(signature)) {
@@ -388,7 +467,7 @@ async function fetchLiveTransactions(): Promise<void> {
                     window.recentFees.push(feeNum);
                     if (window.recentFees.length > 100) window.recentFees.shift();
                     
-                    const avgFee = window.recentFees.reduce((a, b) => a + b, 0) / window.recentFees.length;
+                    const avgFee = window.recentFees.reduce((a: number, b: number) => a + b, 0) / window.recentFees.length;
                     const maxFee = Math.max(...window.recentFees);
                     (window as any).updateFeeChart(avgFee, maxFee);
                 }
@@ -419,7 +498,7 @@ function detectTransactionType(tx: SolanaTransaction): TransactionType {
         if (logsStr.includes('defi') || logsStr.includes('lend') || logsStr.includes('borrow')) return 'DeFi';
     }
     
-    const programIds = accountKeys.map(key => typeof key === 'string' ? key : key.pubkey).filter(Boolean);
+    const programIds = accountKeys.map((key: any) => typeof key === 'string' ? key : key.pubkey).filter(Boolean);
     const programString = programIds.join(' ');
     
     if (programString.includes('Vote111111111111111111111111111111111111111')) return 'Vote';
@@ -430,7 +509,7 @@ function detectTransactionType(tx: SolanaTransaction): TransactionType {
     if (programString.includes('JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB')) return 'Swap';
     
     if (tx.meta?.postBalances && tx.meta?.preBalances) {
-        const hasSignificantChange = tx.meta.preBalances.some((pre, idx) => {
+        const hasSignificantChange = tx.meta.preBalances.some((pre: number, idx: number) => {
             const post = tx.meta?.postBalances?.[idx];
             if (post === undefined) return false;
             return Math.abs(post - pre) > 1000000000;
@@ -678,6 +757,105 @@ function updateNetworkActivity(): void {
 
 let recentBigTransactions: BigTransaction[] = [];
 
+// Function to load cached analytics data from backend
+async function loadCachedAnalytics(): Promise<void> {
+    try {
+        const response = await fetch(`${PROXY_URL}/analytics/cache`);
+        if (response.ok) {
+            const cachedData = await response.json();
+            
+            // Restore network stats
+            if (cachedData.networkStats) {
+                networkStats = { ...networkStats, ...cachedData.networkStats };
+                
+                // Update UI with cached network stats
+                updateValueWithAnimation('networkTps', networkStats.tps, v => v.toLocaleString());
+                updateValueWithAnimation('blockHeight', networkStats.blockHeight, v => v.toLocaleString());
+                updateValueWithAnimation('solPrice', networkStats.solPrice, v => formatPrice(v, selectedCurrency));
+                updateValueWithAnimation('validators', networkStats.validators, v => v.toLocaleString());
+                updateValueWithAnimation('hourlyTx', networkStats.hourlyTransactions, v => v.toLocaleString());
+                updateValueWithAnimation('peakTps', networkStats.peakTps, v => v.toLocaleString());
+                updateValueWithAnimation('totalAnalyzed', networkStats.totalAnalyzed, v => v.toLocaleString());
+            }
+            
+            // Restore big transactions
+            if (cachedData.bigTransactions) {
+                recentBigTransactions = cachedData.bigTransactions;
+                displayBigTransactions();
+            }
+            
+            // Restore chart data
+            if (typeof (window as any).restoreChartData === 'function') {
+                (window as any).restoreChartData(cachedData);
+            }
+            
+            console.log('Loaded cached analytics data');
+        }
+    } catch (error) {
+        console.error('Error loading cached analytics:', error);
+    }
+}
+
+// Function to save current analytics data to backend
+async function saveAnalyticsToCache(): Promise<void> {
+    try {
+        const chartData = typeof (window as any).getChartData === 'function' 
+            ? (window as any).getChartData() 
+            : {};
+        
+        const cacheData = {
+            ...chartData,
+            networkStats,
+            bigTransactions: recentBigTransactions
+        };
+        
+        await fetch(`${PROXY_URL}/analytics/cache`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cacheData)
+        });
+    } catch (error) {
+        console.error('Error saving analytics to cache:', error);
+    }
+}
+
+function displayBigTransactions(): void {
+    const container = document.getElementById('bigTransactions');
+    if (!container) return;
+    
+    let html = '';
+    const topTransactions = recentBigTransactions.slice(0, 5);
+    
+    if (topTransactions.length === 0) {
+        html = '<div class="loading-card"><p>Searching for large transactions...</p></div>';
+    } else {
+        topTransactions.forEach(tx => {
+            const timeAgo = getTimeAgo(tx.timestamp);
+            const localTime = formatLocalTime(tx.timestamp);
+            const usdValue = (tx.amount * networkStats.solPrice).toLocaleString(undefined, {
+                style: 'currency',
+                currency: 'USD',
+                maximumFractionDigits: 0
+            });
+            
+            html += `
+                <div class="big-tx-item">
+                    <div>
+                        <div class="big-tx-amount">${tx.amount.toLocaleString()} SOL</div>
+                        <div class="big-tx-details">${tx.type} Transaction</div>
+                    </div>
+                    <div>
+                        <div class="big-tx-details">${usdValue}</div>
+                        <div class="big-tx-details">${timeAgo} • ${localTime}</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    container.innerHTML = html;
+}
+
 async function fetchBigTransactions(): Promise<void> {
     const container = document.getElementById('bigTransactions');
     if (!container) return;
@@ -708,7 +886,7 @@ async function fetchBigTransactions(): Promise<void> {
         if (data.result?.transactions) {
             const now = Date.now();
             
-            data.result.transactions.forEach(tx => {
+            data.result.transactions.forEach((tx: SolanaTransaction) => {
                 if (tx.meta && !tx.meta.err) {
                     const amount = calculateTransactionAmount(tx);
                     const amountNum = parseFloat(amount);
@@ -736,37 +914,7 @@ async function fetchBigTransactions(): Promise<void> {
             
             recentBigTransactions.sort((a, b) => b.amount - a.amount);
             
-            let html = '';
-            const topTransactions = recentBigTransactions.slice(0, 5);
-            
-            if (topTransactions.length === 0) {
-                html = '<div class="loading-card"><p>Searching for large transactions...</p></div>';
-            } else {
-                topTransactions.forEach(tx => {
-                    const timeAgo = getTimeAgo(tx.timestamp);
-                    const localTime = formatLocalTime(tx.timestamp);
-                    const usdValue = (tx.amount * networkStats.solPrice).toLocaleString(undefined, {
-                        style: 'currency',
-                        currency: 'USD',
-                        maximumFractionDigits: 0
-                    });
-                    
-                    html += `
-                        <div class="big-tx-item">
-                            <div>
-                                <div class="big-tx-amount">${tx.amount.toLocaleString()} SOL</div>
-                                <div class="big-tx-details">${tx.type} Transaction</div>
-                            </div>
-                            <div>
-                                <div class="big-tx-details">${usdValue}</div>
-                                <div class="big-tx-details">${timeAgo} • ${localTime}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            container.innerHTML = html;
+            displayBigTransactions();
         }
     } catch (error) {
         console.error('Error fetching big transactions:', error);
@@ -866,13 +1014,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         const savedCurrency = localStorage.getItem('preferredCurrency');
-        if (savedCurrency && currencySymbols[savedCurrency]) {
+        if (savedCurrency && currencySymbols[savedCurrency as Currency]) {
             selectedCurrency = savedCurrency as Currency;
             currencySelector.value = savedCurrency;
             console.log(`Using saved currency preference: ${savedCurrency}`);
         }
     }
     
+    // Load cached data first
+    await loadCachedAnalytics();
+    
+    // Then fetch fresh data
     await fetchNetworkStats();
     
     fetchLiveTransactions();
@@ -882,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     startCountdown();
     
+    // Regular updates
     setInterval(() => {
         fetchNetworkStats();
         fetchLiveTransactions();
@@ -894,6 +1047,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchTopWallets();
         fetchPopularTokens();
     }, 60000);
+    
+    // Save analytics to cache every 30 seconds
+    setInterval(() => {
+        saveAnalyticsToCache();
+    }, 30000);
 });
 
 console.log('Solanalysis by Jeffrey Goh - Blockchain Analysis');
