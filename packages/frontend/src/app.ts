@@ -1,4 +1,3 @@
-// Type definitions
 interface NetworkStats {
     tps: number;
     blockHeight: number;
@@ -149,7 +148,6 @@ async function detectUserCurrency(): Promise<Currency> {
     try {
         const response = await fetch('https://ipapi.co/json/');
         const data: LocationResponse = await response.json();
-        
         const countryCurrencyMap: { [key: string]: Currency } = {
             US: 'USD', CA: 'CAD',
             GB: 'GBP',
@@ -540,7 +538,6 @@ async function fetchTopWallets(): Promise<void> {
     if (!walletsContainer) return;
     
     const potentialWallets: WalletInfo[] = [
-        // Prioritize wallets most likely to have large balances
         { address: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM', name: 'Binance Main' },
         { address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', name: 'Binance Hot Wallet' },
         { address: 'H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS', name: 'Coinbase' },
@@ -552,31 +549,21 @@ async function fetchTopWallets(): Promise<void> {
         { address: 'GuxBSrv5jnSwwPepkqnmkM7YCBSakKanbnw4BKMdda4F', name: 'Bitfinex' },
         { address: 'EFnVqfWKNFuDhaJNHeYSYKp1aCwLhmqQzz3wvJeA8eJH', name: 'Bybit Cold Wallet' },
         { address: 'CXPeim1wQMkcTvEHx9QdhHe3uQreUdbxXJTLVAcWRbNt', name: 'Huobi Exchange' },
-        
-        // Staking pools and liquid staking
         { address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', name: 'Marinade Staked SOL' },
         { address: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', name: 'Jito Staked SOL' },
         { address: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1', name: 'BlazeStake Pool' },
         { address: 'stSo1mDQTq6uPGaarxydEjzvky3QNYuzJYGgUQBVS2M', name: 'Lido Staked SOL' },
-        
-        // DeFi protocols
         { address: '7Np41oeYqPefeNQEHSv1UDhYrehxin3NStELsSKCT4K2', name: 'Orca Whirlpool' },
         { address: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', name: 'Raydium AMM V4' },
         { address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', name: 'Jupiter Aggregator' },
-        
-        // Market makers and trading firms
         { address: 'ARjxTFWE1T1WsKJxKvG7ETkJ3kYEZLfC91wyYkNbwYXv', name: 'Jump Trading' },
         { address: '3yUDo43vdnJKqHLJBzXgLCqzFBsDZJ2hAjacVKGVJMUr', name: 'Alameda Research' },
         { address: '14kqryJUc9HKvgMUjN265z3vD9t8nFPAP7raQN3ePZBn', name: 'BitMEX' },
-        
-        // Large holders and institutions
         { address: '52C9T2T7JRojtxumYnYZhyUmrN7kqzvCLc4Ksvjk7TxD', name: 'Top Holder #1' },
         { address: '8BseXT9EtoEhBTKFFYkwTnjKSUZwhtmdKY2Jrj8j45Rt', name: 'Top Holder #2' },
         { address: 'H6vpvhyv8nVeXsoE3GCyZ4q2EViENnzwTJzw5fe8LnFV', name: 'Top Holder #3' },
         { address: '3KdEDGvJKBqfJXFNDhBUNcULyMiVnCthmVVggkmZp5Rj', name: 'Top Holder #4' },
         { address: '7nnFLEKHMFgEQbYiE9U8xznbePEaFRjCULCwBrz9Y5Jx', name: 'Top Holder #5' },
-        
-        // Bankrupt/Estate wallets
         { address: 'FTX2jrw1p53AZSxFPPcrmVVGCvT7qcN9X5yLvF1sZYxf', name: 'FTX Estate Main' },
         { address: '7VBa8Gid3Xh2MZvLxk5QD3nhCzFdAZnDm4a5vvNWsJnY', name: 'FTX/Alameda' },
         { address: 'Dv8bBNQQWdnoJ2SmJ2aVaDWi5wPgLNBhqBhzjmX6SgAm', name: 'FTX Estate' },
@@ -584,8 +571,6 @@ async function fetchTopWallets(): Promise<void> {
         { address: '8CvwxZ5A7RpKiDStjGMYkYt43NhcRPMtnKQQhdGX5PK9', name: 'Voyager Digital' },
         { address: '63LfDmNb3MQ8mw9MtZ2To9bEA2M71kZUUGq5tiJxcqj9', name: 'Genesis Trading' },
         { address: 'E7horS2PiJYYZWpC6tanp3VgMupeAwyaWQMvWKaWvGXz', name: 'Three Arrows Capital' },
-        
-        // Additional exchange cold wallets
         { address: 'FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5', name: 'Exchange Wallet' },
         { address: '3sxVPrLXUgNRAaKcQgR9kMFTS5WnPpafAVkqJzX2E3UV', name: 'Alameda Research' },
         { address: 'nm1LeGksEwW3Kw9gSYH8vBqRbyZW4Fvr3EXfZH2bZxq', name: 'Unknown Whale 1' },
@@ -757,18 +742,36 @@ function updateNetworkActivity(): void {
 
 let recentBigTransactions: BigTransaction[] = [];
 
-// Function to load cached analytics data from backend
 async function loadCachedAnalytics(): Promise<void> {
     try {
-        const response = await fetch(`${PROXY_URL}/analytics/cache`);
+        let response = await fetch(`${PROXY_URL}/analytics/cache`);
+        let cachedData = null;
+        
         if (response.ok) {
-            const cachedData = await response.json();
-            
-            // Restore network stats
+            cachedData = await response.json();
+            console.log(`Cache age: ${Math.floor(cachedData.cacheAge / 1000 / 60)} minutes, isStale: ${cachedData.isStale}`);
+        }
+        
+        if (!cachedData || cachedData.isStale || (!cachedData.tpsHistory?.length && !cachedData.priceHistory?.length)) {
+            console.log('Trying persistent cache...');
+            try {
+                const persistentResponse = await fetch(`${PROXY_URL}/analytics/persistent-cache`);
+                if (persistentResponse.ok) {
+                    const persistentData = await persistentResponse.json();
+                    if (persistentData.tpsHistory?.length > 0 || persistentData.priceHistory?.length > 0) {
+                        cachedData = persistentData;
+                        console.log('Using persistent cache data');
+                    }
+                }
+            } catch (persistentError) {
+                console.log('Persistent cache not available:', persistentError);
+            }
+        }
+        
+        if (cachedData) {
             if (cachedData.networkStats) {
                 networkStats = { ...networkStats, ...cachedData.networkStats };
                 
-                // Update UI with cached network stats
                 updateValueWithAnimation('networkTps', networkStats.tps, v => v.toLocaleString());
                 updateValueWithAnimation('blockHeight', networkStats.blockHeight, v => v.toLocaleString());
                 updateValueWithAnimation('solPrice', networkStats.solPrice, v => formatPrice(v, selectedCurrency));
@@ -778,25 +781,24 @@ async function loadCachedAnalytics(): Promise<void> {
                 updateValueWithAnimation('totalAnalyzed', networkStats.totalAnalyzed, v => v.toLocaleString());
             }
             
-            // Restore big transactions
             if (cachedData.bigTransactions) {
                 recentBigTransactions = cachedData.bigTransactions;
                 displayBigTransactions();
             }
             
-            // Restore chart data
             if (typeof (window as any).restoreChartData === 'function') {
                 (window as any).restoreChartData(cachedData);
             }
             
             console.log('Loaded cached analytics data');
+        } else {
+            console.log('No cached data available, starting fresh');
         }
     } catch (error) {
         console.error('Error loading cached analytics:', error);
     }
 }
 
-// Function to save current analytics data to backend
 async function saveAnalyticsToCache(): Promise<void> {
     try {
         const chartData = typeof (window as any).getChartData === 'function' 
@@ -941,10 +943,6 @@ function formatLocalTime(timestamp: number): string {
     });
 }
 
-// function getUserTimezone(): string {
-//     return Intl.DateTimeFormat().resolvedOptions().timeZone;
-// } // Reserved for future use
-
 let lastBlockTime = Date.now();
 function trackBlockTime(): void {
     const now = Date.now();
@@ -1021,10 +1019,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Load cached data first
     await loadCachedAnalytics();
     
-    // Then fetch fresh data
     await fetchNetworkStats();
     
     fetchLiveTransactions();
@@ -1034,7 +1030,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     startCountdown();
     
-    // Regular updates
     setInterval(() => {
         fetchNetworkStats();
         fetchLiveTransactions();
@@ -1048,10 +1043,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchPopularTokens();
     }, 60000);
     
-    // Save analytics to cache every 30 seconds
     setInterval(() => {
         saveAnalyticsToCache();
     }, 30000);
+    
+    setInterval(async () => {
+        try {
+            await fetch(`${PROXY_URL}/analytics/persistent-cache`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            console.log('Persistent cache saved');
+        } catch (error) {
+            console.error('Failed to save persistent cache:', error);
+        }
+    }, 5 * 60 * 1000);
 });
 
 console.log('Solanalysis by Jeffrey Goh - Blockchain Analysis');

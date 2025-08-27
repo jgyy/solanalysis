@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces",
     "build:backend": "npm run build --workspace=@solanalysis/backend",
     "build:frontend": "npm run build --workspace=@solanalysis/frontend",
+    "build:infra": "npm run build --workspace=@solanalysis/infrastructure",
     "start": "npm run start --workspace=@solanalysis/backend",
     "clean": "npm run clean --workspaces",
     "test": "npm run test --workspaces --if-present",
@@ -20,7 +21,15 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "infra:bootstrap": "npm run bootstrap:singapore --workspace=@solanalysis/infrastructure",
+    "infra:deploy": "npm run deploy --workspace=@solanalysis/infrastructure",
+    "infra:destroy": "npm run destroy --workspace=@solanalysis/infrastructure",
+    "infra:synth": "npm run synth --workspace=@solanalysis/infrastructure",
+    "infra:list": "npm run list --workspace=@solanalysis/infrastructure",
+    "infra:outputs": "npm run outputs --workspace=@solanalysis/infrastructure",
+    "deploy": "npm run build && npm run infra:deploy",
+    "destroy": "npm run infra:destroy"
   },
   "keywords": [
     "solana",

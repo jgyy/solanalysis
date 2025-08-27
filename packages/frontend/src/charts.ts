@@ -16,7 +16,6 @@ import {
     Filler
 } from 'chart.js';
 
-// Type definitions
 interface ChartDataPoint {
     time: string;
     value: number;
@@ -74,7 +73,7 @@ let activityData: ChartDataPoint[] = [];
 let blockTimeData: ChartDataPoint[] = [];
 let feeData: FeeDataPoint[] = [];
 
-const MAX_DATA_POINTS = 60;
+const MAX_DATA_POINTS = 200;
 
 let tpsChart: Chart | null = null;
 let txTypesChart: Chart | null = null;
@@ -480,7 +479,7 @@ function updateActivityChart(load: number): void {
     });
 
     activityData.push({ time: timeLabel, value: load });
-    if (activityData.length > 24) {
+    if (activityData.length > 48) {
         activityData.shift();
     }
 
@@ -675,6 +674,54 @@ function getChartData() {
     };
 }
 
+// Function to save chart data to localStorage
+function saveChartDataToLocal(): void {
+    try {
+        const chartData = {
+            tpsHistory,
+            priceHistory,
+            txTypeStats,
+            activityData,
+            blockTimeData,
+            feeData,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('solanalysis_chart_data', JSON.stringify(chartData));
+    } catch (error) {
+        console.error('Failed to save chart data to localStorage:', error);
+    }
+}
+
+// Function to load chart data from localStorage
+function loadChartDataFromLocal(): boolean {
+    try {
+        const stored = localStorage.getItem('solanalysis_chart_data');
+        if (!stored) return false;
+        
+        const data = JSON.parse(stored);
+        const age = Date.now() - (data.timestamp || 0);
+        
+        // Use localStorage data if less than 1 hour old
+        if (age < 60 * 60 * 1000) {
+            if (data.tpsHistory) tpsHistory = data.tpsHistory;
+            if (data.priceHistory) priceHistory = data.priceHistory;
+            if (data.txTypeStats) txTypeStats = data.txTypeStats;
+            if (data.activityData) activityData = data.activityData;
+            if (data.blockTimeData) blockTimeData = data.blockTimeData;
+            if (data.feeData) feeData = data.feeData;
+            
+            console.log('Loaded chart data from localStorage');
+            return true;
+        } else {
+            // Clear old data
+            localStorage.removeItem('solanalysis_chart_data');
+        }
+    } catch (error) {
+        console.error('Failed to load chart data from localStorage:', error);
+    }
+    return false;
+}
+
 // Function to restore chart data from cache
 function restoreChartData(cachedData: any): void {
     if (cachedData.tpsHistory) {
@@ -735,9 +782,27 @@ function restoreChartData(cachedData: any): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Load data from localStorage first for immediate display
+    const hasLocalData = loadChartDataFromLocal();
+    
     setTimeout(() => {
         initCharts();
+        
+        // If we have local data, populate charts immediately
+        if (hasLocalData) {
+            restoreChartData({
+                tpsHistory,
+                priceHistory,
+                txTypeStats,
+                activityData,
+                blockTimeData,
+                feeData
+            });
+        }
     }, 500);
+    
+    // Save chart data to localStorage every 30 seconds
+    setInterval(saveChartDataToLocal, 30000);
 });
 
 (window as any).updateTPSChart = updateTPSChart;

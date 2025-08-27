@@ -66,8 +66,9 @@ let analyticsCache: AnalyticsCache = {
     lastUpdated: Date.now()
 };
 
-const MAX_DATA_POINTS = 60;
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_DATA_POINTS = 200;
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
+const PERSISTENT_CACHE_DURATION = 30 * 24 * 60 * 60 * 1000;
 
 app.use(cors({
     origin: [
@@ -92,37 +93,15 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.get('/analytics/cache', (_req: Request, res: Response) => {
     const now = Date.now();
-    if (now - analyticsCache.lastUpdated > CACHE_DURATION) {
-        analyticsCache = {
-            tpsHistory: [],
-            priceHistory: [],
-            txTypeStats: {
-                Transfer: 0,
-                Swap: 0,
-                NFT: 0,
-                Token: 0,
-                DeFi: 0,
-                Stake: 0,
-                Vote: 0,
-                Other: 0
-            },
-            activityData: [],
-            blockTimeData: [],
-            feeData: [],
-            networkStats: {
-                tps: 0,
-                blockHeight: 0,
-                solPrice: 0,
-                validators: 0,
-                peakTps: 0,
-                hourlyTransactions: 0,
-                totalAnalyzed: 0
-            },
-            bigTransactions: [],
-            lastUpdated: now
-        };
-    }
-    res.json(analyticsCache);
+    
+    // Don't clear cache, just mark it as potentially stale
+    const cacheResponse = {
+        ...analyticsCache,
+        isStale: now - analyticsCache.lastUpdated > CACHE_DURATION,
+        cacheAge: now - analyticsCache.lastUpdated
+    };
+    
+    res.json(cacheResponse);
 });
 
 app.post('/analytics/cache', (req: Request, res: Response) => {
@@ -148,8 +127,8 @@ app.post('/analytics/cache', (req: Request, res: Response) => {
     
     if (updates.activityData) {
         analyticsCache.activityData = updates.activityData;
-        if (analyticsCache.activityData.length > 24) {
-            analyticsCache.activityData = analyticsCache.activityData.slice(-24);
+        if (analyticsCache.activityData.length > 48) {
+            analyticsCache.activityData = analyticsCache.activityData.slice(-48);
         }
     }
     
@@ -214,7 +193,7 @@ app.post('/analytics/append', (req: Request, res: Response) => {
         case 'activity':
             if (data) {
                 analyticsCache.activityData.push(data);
-                if (analyticsCache.activityData.length > 24) {
+                if (analyticsCache.activityData.length > 48) {
                     analyticsCache.activityData.shift();
                 }
             }
@@ -260,6 +239,31 @@ app.post('/analytics/append', (req: Request, res: Response) => {
     
     analyticsCache.lastUpdated = Date.now();
     res.json({ success: true, type, lastUpdated: analyticsCache.lastUpdated });
+});
+
+// New endpoint for persistent cache - keeps data even when server restarts
+let persistentCache: AnalyticsCache | null = null;
+
+app.get('/analytics/persistent-cache', (_req: Request, res: Response) => {
+    if (persistentCache) {
+        res.json({
+            ...persistentCache,
+            source: 'persistent'
+        });
+    } else {
+        res.json({
+            ...analyticsCache,
+            source: 'memory'
+        });
+    }
+});
+
+app.post('/analytics/persistent-cache', (req: Request, res: Response) => {
+    persistentCache = {
+        ...analyticsCache,
+        lastUpdated: Date.now()
+    };
+    res.json({ success: true, message: 'Persistent cache saved' });
 });
 
 app.post('/solana-rpc', async (req: Request, res: Response) => {

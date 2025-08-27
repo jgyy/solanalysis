@@ -1,0 +1,337 @@
+{
+ "Resources": {
+  "LightsailRoleFF1C82A3": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "lightsail:*",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "LightsailPolicy"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailRole/Resource"
+   }
+  },
+  "LightsailHandlerB88DB77F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\nimport boto3\nimport json\nimport time\nimport base64\n\ndef handler(event, context):\n    print(f\"Event: {json.dumps(event)}\")\n    \n    lightsail = boto3.client('lightsail', region_name='ap-southeast-1')  # Singapore region\n    \n    instance_name = event['ResourceProperties']['InstanceName']\n    blueprint_id = event['ResourceProperties']['BlueprintId']\n    bundle_id = event['ResourceProperties']['BundleId']\n    user_data = event['ResourceProperties']['UserData']\n    \n    try:\n        if event['RequestType'] == 'Create':\n            print(f\"Creating Lightsail instance: {instance_name}\")\n            \n            # Create Lightsail instance in Singapore\n            response = lightsail.create_instances(\n                instanceNames=[instance_name],\n                availabilityZone='ap-southeast-1a',  # Singapore AZ\n                blueprintId=blueprint_id,\n                bundleId=bundle_id,\n                userData=user_data\n            )\n            print(f\"Create response: {response}\")\n            \n            # Wait for instance to be running (with timeout)\n            max_attempts = 60  # 10 minutes\n            attempt = 0\n            \n            while attempt < max_attempts:\n                try:\n                    instance_response = lightsail.get_instance(instanceName=instance_name)\n                    state = instance_response['instance']['state']['name']\n                    print(f\"Instance state: {state} (attempt {attempt + 1})\")\n                    \n                    if state == 'running':\n                        break\n                    elif state in ['terminated', 'stopping', 'stopped']:\n                        raise Exception(f\"Instance failed to start, state: {state}\")\n                        \n                    time.sleep(10)\n                    attempt += 1\n                except Exception as e:\n                    if 'NotFoundException' in str(e):\n                        print(\"Instance not found yet, waiting...\")\n                        time.sleep(10)\n                        attempt += 1\n                        continue\n                    else:\n                        raise e\n            \n            if attempt >= max_attempts:\n                raise Exception(\"Timeout waiting for instance to become running\")\n            \n            # Get final instance info\n            instance = lightsail.get_instance(instanceName=instance_name)\n            public_ip = instance['instance'].get('publicIpAddress', 'pending')\n            private_ip = instance['instance'].get('privateIpAddress', 'pending')\n            \n            print(f\"Instance created successfully. Public IP: {public_ip}\")\n            \n            return {\n                'PhysicalResourceId': instance_name,\n                'Data': {\n                    'InstanceName': instance_name,\n                    'PublicIpAddress': public_ip,\n                    'PrivateIpAddress': private_ip\n                }\n            }\n            \n        elif event['RequestType'] == 'Delete':\n            print(f\"Deleting Lightsail instance: {instance_name}\")\n            try:\n                lightsail.delete_instance(instanceName=instance_name)\n                print(\"Instance deletion initiated\")\n            except Exception as e:\n                print(f\"Error deleting instance: {str(e)}\")\n                # Don't fail deletion if instance doesn't exist\n                \n            return {'PhysicalResourceId': instance_name}\n            \n        elif event['RequestType'] == 'Update':\n            print(\"Update requested - returning existing instance\")\n            # For updates, we'll return the existing instance info\n            try:\n                instance = lightsail.get_instance(instanceName=instance_name)\n                public_ip = instance['instance'].get('publicIpAddress', 'pending')\n                private_ip = instance['instance'].get('privateIpAddress', 'pending')\n                \n                return {\n                    'PhysicalResourceId': instance_name,\n                    'Data': {\n                        'InstanceName': instance_name,\n                        'PublicIpAddress': public_ip,\n                        'PrivateIpAddress': private_ip\n                    }\n                }\n            except Exception as e:\n                print(f\"Instance not found during update: {str(e)}\")\n                return {'PhysicalResourceId': instance_name}\n            \n    except Exception as e:\n        print(f\"Error: {str(e)}\")\n        raise e\n"
+    },
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LightsailRoleFF1C82A3",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 600
+   },
+   "DependsOn": [
+    "LightsailRoleFF1C82A3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailHandler/Resource"
+   }
+  },
+  "LightsailProviderframeworkonEventServiceRoleC3D0E1E6": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailProvider/framework-onEvent/ServiceRole/Resource"
+   }
+  },
+  "LightsailProviderframeworkonEventServiceRoleDefaultPolicy313B023A": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "LightsailHandlerB88DB77F",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "LightsailHandlerB88DB77F",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:GetFunction",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "LightsailHandlerB88DB77F",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LightsailProviderframeworkonEventServiceRoleDefaultPolicy313B023A",
+    "Roles": [
+     {
+      "Ref": "LightsailProviderframeworkonEventServiceRoleC3D0E1E6"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailProvider/framework-onEvent/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LightsailProviderframeworkonEventDA350605": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-473359703960-ap-southeast-1",
+     "S3Key": "bdc104ed9cab1b5b6421713c8155f0b753380595356f710400609664d3635eca.zip"
+    },
+    "Description": "AWS CDK resource provider framework - onEvent (SolanalysisLightsail-prod/LightsailProvider)",
+    "Environment": {
+     "Variables": {
+      "USER_ON_EVENT_FUNCTION_ARN": {
+       "Fn::GetAtt": [
+        "LightsailHandlerB88DB77F",
+        "Arn"
+       ]
+      }
+     }
+    },
+    "Handler": "framework.onEvent",
+    "LoggingConfig": {
+     "ApplicationLogLevel": "FATAL",
+     "LogFormat": "JSON"
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LightsailProviderframeworkonEventServiceRoleC3D0E1E6",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 900
+   },
+   "DependsOn": [
+    "LightsailProviderframeworkonEventServiceRoleDefaultPolicy313B023A",
+    "LightsailProviderframeworkonEventServiceRoleC3D0E1E6"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailProvider/framework-onEvent/Resource",
+    "aws:asset:path": "asset.bdc104ed9cab1b5b6421713c8155f0b753380595356f710400609664d3635eca",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "LightsailInstance": {
+   "Type": "AWS::CloudFormation::CustomResource",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LightsailProviderframeworkonEventDA350605",
+      "Arn"
+     ]
+    },
+    "InstanceName": "solanalysis-prod",
+    "BlueprintId": "ubuntu_22_04",
+    "BundleId": "nano_2_0",
+    "UserData": "#!/bin/bash\nset -e\n\n# Update system\napt-get update\napt-get upgrade -y\n\n# Install Docker\ncurl -fsSL https://get.docker.com -o get-docker.sh\nsh get-docker.sh\nsystemctl enable docker\nsystemctl start docker\nusermod -aG docker ubuntu\n\n# Install Docker Compose\ncurl -L \"https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose\nchmod +x /usr/local/bin/docker-compose\nln -s /usr/local/bin/docker-compose /usr/bin/docker-compose\n\n# Create application directory\nmkdir -p /opt/solanalysis\ncd /opt/solanalysis\n\n# Create docker-compose.yml for production\ncat > docker-compose.yml << 'EOF'\nversion: '3.8'\nservices:\n  backend:\n    image: solanalysis/backend:latest\n    container_name: solanalysis-backend\n    restart: unless-stopped\n    environment:\n      - NODE_ENV=production\n      - PORT=3000\n    ports:\n      - \"3000:3000\"\n    healthcheck:\n      test: [\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\", \"http://localhost:3000/health\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n      start_period: 40s\n    logging:\n      driver: \"json-file\"\n      options:\n        max-size: \"10m\"\n        max-file: \"3\"\n\n  frontend:\n    image: solanalysis/frontend:latest\n    container_name: solanalysis-frontend\n    restart: unless-stopped\n    ports:\n      - \"80:80\"\n    depends_on:\n      - backend\n    healthcheck:\n      test: [\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\", \"http://localhost\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n      start_period: 20s\n    logging:\n      driver: \"json-file\"\n      options:\n        max-size: \"10m\"\n        max-file: \"3\"\n\n\nEOF\n\n# Start the application\ndocker-compose up -d\n\n# Setup log rotation\ncat > /etc/logrotate.d/docker << 'EOF'\n/var/lib/docker/containers/*/*.log {\n  rotate 3\n  daily\n  compress\n  size=10M\n  missingok\n  delaycompress\n  copytruncate\n}\nEOF\n\n# Setup automatic updates (security patches)\necho 'unattended-upgrades unattended-upgrades/enable_auto_updates boolean true' | debconf-set-selections\napt-get install -y unattended-upgrades\necho 'Unattended-Upgrade::Automatic-Reboot \"false\";' >> /etc/apt/apt.conf.d/50unattended-upgrades\n\n# Setup monitoring script\ncat > /usr/local/bin/health-check.sh << 'EOF'\n#!/bin/bash\n# Simple health check script\ncurl -f http://localhost/health || {\n    echo \"Health check failed, restarting containers...\"\n    cd /opt/solanalysis\n    docker-compose restart\n}\nEOF\nchmod +x /usr/local/bin/health-check.sh\n\n# Add health check to crontab (every 5 minutes)\n(crontab -l 2>/dev/null; echo \"*/5 * * * * /usr/local/bin/health-check.sh\") | crontab -\n\necho \"Solanalysis deployment completed in Singapore region!\"\n"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/LightsailInstance/Default"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/02O3YrCQAyFn8X7NKvjvsAqeGupD1DiNEpsOyOTjCKl7760/uDV9x1ODsShWzlcLuiuhW/aopMjDgcj3wLdtR6Eehyq2DFsT2FmGTvxjyk+bYSO+mNDOOxy8CYxTN3bR9B1Tapsin8TQNe4yb5l25DyCBVrzMkz+KwW+zq9smKZ4k0aTjDvDkZnCWfYzmef1fTVl++zXbONEGLDeNGfm/vFJbrFRUWKlINJz1g9+Q9azgOQ+wAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "SolanalysisLightsail-prod/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "InstanceName": {
+   "Description": "Lightsail Instance Name",
+   "Value": {
+    "Fn::GetAtt": [
+     "LightsailInstance",
+     "InstanceName"
+    ]
+   }
+  },
+  "PublicIP": {
+   "Description": "Instance Public IP Address (Singapore)",
+   "Value": {
+    "Fn::GetAtt": [
+     "LightsailInstance",
+     "PublicIpAddress"
+    ]
+   }
+  },
+  "ApplicationURL": {
+   "Description": "Application URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "LightsailInstance",
+        "PublicIpAddress"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "Region": {
+   "Description": "AWS Region",
+   "Value": "ap-southeast-1 (Singapore)"
+  },
+  "MonthlyCost": {
+   "Description": "Estimated Monthly Cost",
+   "Value": "$3.50/month (Lightsail nano instance)"
+  },
+  "SSHCommand": {
+   "Description": "SSH Command (after uploading your key to Lightsail console)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "ssh -i ~/.ssh/solanalysis-key.pem ubuntu@",
+      {
+       "Fn::GetAtt": [
+        "LightsailInstance",
+        "PublicIpAddress"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "NextSteps": {
+   "Description": "Next Steps After Deployment",
+   "Value": "1. Build and push Docker images 2. Wait 5-10 mins for deployment 3. Configure DNS if using custom domain"
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
